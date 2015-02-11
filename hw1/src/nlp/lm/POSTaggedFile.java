@@ -127,7 +127,7 @@ public class POSTaggedFile {
 	    }
 	}
 	// File should always end at end of a sentence
-	assert(sentence.isEmpty());
+	//assert(sentence.isEmpty());
 	return sentences;
     }
 

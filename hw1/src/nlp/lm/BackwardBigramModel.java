@@ -42,6 +42,7 @@ public class BackwardBigramModel {
     /** Train the model on a List of sentences represented as
      *  Lists of String tokens */
     public void train (List<List<String>> sentences) {
+    	Collections.reverse(sentences);
 	// Accumulate unigram and bigram counts in maps
 	trainSentences(sentences);
 	// Compure final unigram and bigram probs from counts
@@ -50,6 +51,7 @@ public class BackwardBigramModel {
 
     /** Accumulate unigram and bigram counts for these sentences */
     public void trainSentences (List<List<String>> sentences) {
+    	Collections.reverse(sentences);
 	for (List<String> sentence : sentences) {
 	    trainSentence(sentence);
 	}
@@ -274,7 +276,7 @@ public class BackwardBigramModel {
      *  including the end of sentence */
     public double[] sentenceTokenProbs (List<String> sentence) {
 	// Set start-sentence as initial token
-	String prevToken = "<S>";
+	String prevToken = "</S>";
 	// Vector for storing token prediction probs
 	double[] tokenProbs = new double[sentence.size() + 1];
 	// Token counter
@@ -294,8 +296,8 @@ public class BackwardBigramModel {
 	    i++;
 	}
 	// Check prediction of end of sentence
-	DoubleValue unigramVal = unigramMap.get("</S>");
-	String bigram = bigram(prevToken, "</S>");
+	DoubleValue unigramVal = unigramMap.get("<S>");
+	String bigram = bigram(prevToken, "<S>");
 	DoubleValue bigramVal = bigramMap.get(bigram);
 	// Store end of sentence prediction prob
 	tokenProbs[i] = interpolatedProb(unigramVal, bigramVal);
@@ -339,12 +341,12 @@ public class BackwardBigramModel {
 	// Get list of sentences from the LDC POS tagged input files
 	List<List<String>> sentences = 	POSTaggedFile.convertToTokenLists(files);
 	
-	//reverse each sentence.
-	for(List<String> sen : sentences) {
-		Collections.reverse(sen);
-	}
-	//reverse the entire document
-	Collections.reverse(sentences);
+//	//reverse each sentence.
+//	for(List<String> sen : sentences) {
+//		Collections.reverse(sen);
+//	}
+//	//reverse the entire document
+//	Collections.reverse(sentences);
 	
 	int numSentences = sentences.size();
 	// Compute number of test sentences based on TestFrac

@@ -307,6 +307,7 @@ public class BigramModel {
 	// In bigram unknown then its prob is zero
 	if (bigramVal != null)
 	    bigramProb = bigramVal.getValue();
+	
 	// Linearly combine weighted unigram and bigram probs
 	return lambda1 * unigramVal.getValue() + lambda2 * bigramProb;
     }
