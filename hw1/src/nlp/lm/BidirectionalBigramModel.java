@@ -10,15 +10,6 @@ import java.util.*;
 
 public class BidirectionalBigramModel {
 
-	/** Total count of tokens in training data */
-	public double tokenCount = 0;
-
-	/** Interpolation weight for unigram model */
-	public double lambda1 = 0.1;
-
-	/** Interpolation weight for bigram model */
-	public double lambda2 = 0.9;
-
 	/** Interpolation weight for normal bigram model */
 	public double lambda3 = 0.5;
 
@@ -44,11 +35,6 @@ public class BidirectionalBigramModel {
 		backBigramModel.train(sentences);
 	}
 
-	/** Return bigram string as two tokens separated by a newline */
-	public String bigram(String prevToken, String token) {
-		return prevToken + "\n" + token;
-	}
-
 	/**
 	 * Like test1 but excludes predicting end-of-sentence when computing
 	 * perplexity
@@ -71,95 +57,20 @@ public class BidirectionalBigramModel {
 	 * computing prob
 	 */
 	public double sentenceLogProb2(List<String> sentence) {
-		String prevToken = "<S>";
-
+		double[] forward = this.bigramModel.sentenceTokenProbs(sentence);
+		List<String> senRev = new ArrayList<String>(sentence);
+		Collections.reverse(senRev);
+		double[] backward = this.backBigramModel.sentenceTokenProbs(senRev);
 		double sentenceLogProb = 0;
-		for (String token : sentence) {
-			DoubleValue unigramVal = bigramModel.unigramMap.get(token);
-			if (unigramVal == null) {
-				token = "<UNK>";
-				unigramVal = bigramModel.unigramMap.get(token);
-			}
-			token2UnigramVal.put(token, unigramVal);
-			String bigram = bigram(prevToken, token);
-			// DoubleValue bigramVal = bigramMap.get(bigram);
-			DoubleValue bigramVal = bigramModel.bigramMap.get(bigram);
-			token2BigramVal.put(token, bigramVal);
-			prevToken = token;
 
-		}
-		
-		String nextToken = "</S>";
-		List<String> backSentence = new ArrayList<String>(sentence);
-		Collections.reverse(backSentence);
-		for (String token : backSentence) {
-			DoubleValue unigramVal = backBigramModel.unigramMap.get(token);
-			if (unigramVal == null) {
-				token = "<UNK>";
-				unigramVal = backBigramModel.unigramMap.get(token);
-			}
-			token2BackUnigramVal.put(token, unigramVal);
-
-			String bigram = bigram(nextToken, token);
-			// DoubleValue bigramVal = bigramMap.get(bigram);
-			DoubleValue bigramVal = backBigramModel.bigramMap.get(bigram);
-			token2BackBigramVal.put(token, bigramVal);
-			nextToken = token;
-		}
-		
-		for (String token : sentence) {
-
-			DoubleValue unigramVal1 = token2UnigramVal.get(token);
-			if (unigramVal1 == null) {
-				token = "<UNK>";
-				unigramVal1 = token2UnigramVal.get(token);
-			}
-			DoubleValue unigramVal2 = token2BackUnigramVal.get(token);
-			if (unigramVal2 == null) {
-				token = "<UNK>";
-				unigramVal2 = token2UnigramVal.get(token);
-			}
-			DoubleValue bigramVal1 = token2BigramVal.get(token);
-			DoubleValue bigramVal2 = token2BackUnigramVal.get(token);
-			
-			double logProb = Math.log(interpolatedProb(unigramVal1,
-					unigramVal2, bigramVal1, bigramVal2));
-			assert logProb > -2000 : token;
-			
+		for (int i = 0; i < sentence.size(); i++) {
+			double d1 = forward[i] * lambda3;
+			double d2 = backward[sentence.size() - i - 1] * lambda4;
+			double logProb = Math.log(d1 + d2);
 			sentenceLogProb += logProb;
-			assert !token.equals("agreed-upon") : sentence;
-
 		}
+
 		return sentenceLogProb;
-	}
-
-	HashMap<String, DoubleValue> token2UnigramVal = new HashMap<String, DoubleValue>();
-	HashMap<String, DoubleValue> token2BigramVal = new HashMap<String, DoubleValue>();
-
-	HashMap<String, DoubleValue> token2BackUnigramVal = new HashMap<String, DoubleValue>();
-	HashMap<String, DoubleValue> token2BackBigramVal = new HashMap<String, DoubleValue>();
-
-	/** Interpolate bigram prob using bigram and unigram model predictions */
-	public double interpolatedProb(DoubleValue unigramVal1,
-			DoubleValue unigramVal2, DoubleValue bigramVal1,
-			DoubleValue bigramVal2) {
-		double bigramProb = 0;
-		// In bigram unknown then its prob is zero
-		if (bigramVal1 != null)
-			bigramProb = bigramVal1.getValue() * lambda3;
-		if (bigramVal2 != null)
-			bigramProb += bigramVal2.getValue() * lambda4;
-		
-		double unigramProb = 0;
-		
-		if(unigramVal1 != null)
-			unigramProb = unigramVal1.getValue() * lambda3;
-		if(unigramVal2 != null)
-			unigramProb += unigramVal2.getValue() * lambda4;
-
-		// Linearly combine weighted unigram and bigram probs
-		return lambda1
-				* unigramProb + lambda2 * bigramProb;
 	}
 
 	public static int wordCount(List<List<String>> sentences) {
