@@ -1,0 +1,22 @@
+yufeng@yufeng-Precision-T7610:~/courses/CS388/hw1$ java -cp bin/ nlp.lm.BidirectionalBigramModel pos/atis/ 0.1
+# Train Sentences = 519 (# words = 3922) 
+# Test Sentences = 58 (# words = 431)
+Training...
+Word Perplexity = 7.235173934082009
+Testing...
+Word Perplexity = 12.700210156018738
+yufeng@yufeng-Precision-T7610:~/courses/CS388/hw1$ java -cp bin/ nlp.lm.BidirectionalBigramModel pos/wsj/ 0.1
+# Train Sentences = 43820 (# words = 995024) 
+# Test Sentences = 4869 (# words = 112320)
+Training...
+Word Perplexity = 46.581206695796844
+Testing...
+Word Perplexity = 121.25067990113382
+yufeng@yufeng-Precision-T7610:~/courses/CS388/hw1$ java -cp bin/ nlp.lm.BidirectionalBigramModel pos/brown/ 0.1
+# Train Sentences = 47207 (# words = 1036796) 
+# Test Sentences = 5245 (# words = 136174)
+Training...
+Word Perplexity = 59.83339387698143
+Testing...
+Word Perplexity = 232.00811221064347
+

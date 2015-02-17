@@ -7,7 +7,8 @@ import java.util.*;
  * @author Yu Feng
  * Backward bigram language model that uses simple fixed-weight interpolation
  * with a unigram model for smoothing.
- * Modified based on Ray Mooney's code
+ * Modified based on Ray Mooney's code. Since the algorithm is almost identical, we only
+ * need to swap the direction of the sentences.
 */
 
 public class BackwardBigramModel extends BigramModel{
@@ -16,16 +17,28 @@ public class BackwardBigramModel extends BigramModel{
 	public void trainSentence(List<String> sentence) {
 		List<String> senRev = new ArrayList<String>(sentence);
 		Collections.reverse(senRev);
+		//invoke the original training procedure.
 		super.trainSentence(senRev);
 	}
 
 	/**
-	 * Do the same thing for sentenceLogProb2
+	 * Do the same thing for sentenceLogProb2 except for reversing the order
 	 */
 	public double sentenceLogProb2(List<String> sentence) {
 		List<String> senRev = new ArrayList<String>(sentence);
 		Collections.reverse(senRev);
+		//invoke the original bigram model.
 		return super.sentenceLogProb2(senRev);
+	}
+	
+	/**
+	 * Do the same thing for sentenceLogProb except for reversing the order
+	 */
+	public double sentenceLogProb(List<String> sentence) {
+		List<String> senRev = new ArrayList<String>(sentence);
+		Collections.reverse(senRev);
+		//invoke the original bigram model.
+		return super.sentenceLogProb(senRev);
 	}
 
 	/**
@@ -63,9 +76,11 @@ public class BackwardBigramModel extends BigramModel{
 		System.out.println("Training...");
 		model.train(trainSentences);
 		// Test on training data using test and test2
+		model.test(trainSentences);
 		model.test2(trainSentences);
 		System.out.println("Testing...");
 		// Test on test data using test and test2
+		model.test(testSentences);
 		model.test2(testSentences);
 	}
 

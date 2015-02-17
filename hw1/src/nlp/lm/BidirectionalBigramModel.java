@@ -4,11 +4,16 @@ import java.io.*;
 import java.util.*;
 
 /**
- * @author Ray Mooney A simple Bidrection bigram language model that uses simple
- *         fixed-weight interpolation with a unigram model for smoothing.
+ * @author Yu Feng 
+ * Bidrectional bigram language model based on Mooney's code.
  */
 
-public class BidirectionalBigramModel {
+public class BidirectionalBigramModel extends BigramModel{
+	
+	//ref to bigramModel
+	private BigramModel bigramModel;
+	//ref to backwardBigramModel
+	private BackwardBigramModel backBigramModel;
 
 	/** Interpolation weight for normal bigram model */
 	public double lambda3 = 0.5;
@@ -30,26 +35,9 @@ public class BidirectionalBigramModel {
 	 * tokens
 	 */
 	public void train(List<List<String>> sentences) {
-		// train two models separately.
+		// train each model separately.
 		bigramModel.train(sentences);
 		backBigramModel.train(sentences);
-	}
-
-	/**
-	 * Like test1 but excludes predicting end-of-sentence when computing
-	 * perplexity
-	 */
-	public void test2(List<List<String>> sentences) {
-		double totalLogProb = 0;
-		double totalNumTokens = 0;
-		for (List<String> sentence : sentences) {
-			totalNumTokens += sentence.size();
-			double sentenceLogProb = sentenceLogProb2(sentence);
-			// System.out.println(sentenceLogProb + " : " + sentence);
-			totalLogProb += sentenceLogProb;
-		}
-		double perplexity = Math.exp(-totalLogProb / totalNumTokens);
-		System.out.println("Word Perplexity = " + perplexity);
 	}
 
 	/**
@@ -64,21 +52,16 @@ public class BidirectionalBigramModel {
 		double sentenceLogProb = 0;
 
 		for (int i = 0; i < sentence.size(); i++) {
+			//linearly interpolate the probability of each model.
 			double d1 = forward[i] * lambda3;
-			double d2 = backward[sentence.size() - i - 1] * lambda4;
+			// Easy to make a mistake! index for the backward pointer.
+			int backOffset = sentence.size() - i - 1;
+			double d2 = backward[backOffset] * lambda4;
 			double logProb = Math.log(d1 + d2);
 			sentenceLogProb += logProb;
 		}
 
 		return sentenceLogProb;
-	}
-
-	public static int wordCount(List<List<String>> sentences) {
-		int wordCount = 0;
-		for (List<String> sentence : sentences) {
-			wordCount += sentence.size();
-		}
-		return wordCount;
 	}
 
 	/**
@@ -116,14 +99,11 @@ public class BidirectionalBigramModel {
 		System.out.println("Training...");
 		model.train(trainSentences);
 		
-		// Test on training data using test and test2
+		// Test on training data using test2
+		// only need to show the "Word Perplexity"
 		model.test2(trainSentences);
 		System.out.println("Testing...");
-		// Test on test data using test and test2
+		// Test on test data using test2
 		model.test2(testSentences);
 	}
-
-	BigramModel bigramModel;
-	BackwardBigramModel backBigramModel;
-
 }

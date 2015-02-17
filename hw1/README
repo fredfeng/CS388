@@ -1,0 +1,20 @@
+Assume you have installed java and placed all the POS files in current folder.
+
+To reproduce the results, first compile the sources by running the compile.sh script and execute the main method of each model accordingly. For example, executing the following command will dump the trace for the backward bigram model on the wsj corpora:
+
+java -cp bin/ nlp.lm.BackwardBigramModel pos/wsj/ 0.1
+
+
+which will display the trace similar to this:
+
+# Train Sentences = 43820 (# words = 995024) 
+# Test Sentences = 4869 (# words = 112320)
+Training...
+Perplexity = 74.36070352512667
+Word Perplexity = 86.75945534817288
+Testing...
+Perplexity = 212.41719625520673
+Word Perplexity = 257.1577316631044
+\end{verbatim}
+
+Running the batch.sh script will display the comparison on all POS data sets.
