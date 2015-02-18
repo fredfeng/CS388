@@ -15,6 +15,5 @@ Word Perplexity = 86.75945534817288
 Testing...
 Perplexity = 212.41719625520673
 Word Perplexity = 257.1577316631044
-\end{verbatim}
 
 Running the batch.sh script will display the comparison on all POS data sets.
