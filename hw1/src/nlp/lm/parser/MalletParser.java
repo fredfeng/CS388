@@ -12,7 +12,7 @@ public class MalletParser {
 
 	public static void main(String[] args) throws IOException {
 		String src = "/home/yufeng/courses/CS388/hw1/pos/atis/atis3.pos";
-		 src = "/home/yufeng/courses/CS388/hw1/pos/wsj/00/wsj_0001.pos";
+		src = "/home/yufeng/courses/CS388/hw1/pos/wsj/00/wsj_0001.pos";
 		String divider = "===========";
 		String outLoc = "/home/yufeng/courses/CS388/hw1/train.txt";
 		File in = new File(src);

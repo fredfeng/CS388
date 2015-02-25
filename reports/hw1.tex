@@ -72,28 +72,7 @@ brown       & 433.77 & 423.88 & 232.01  \\  \hline
 
 The results show that the backward bigram model outperforms the normal bigram model in the \emph{wsj} and \emph{brown} corpora, but worse in the \emph{atis} corpora; Meanwhile, bidirectional bigram model yields the best word perplexity across all POS data sets.
 
-To reproduce the results, first compile the sources by running the ``\texttt{compile.sh}" script and execute the main method of each model accordingly. For example, executing the following command will dump the trace for the backward bigram model on the \emph{wsj} corpora:
-\small
-\begin{verbatim}
-java -cp bin/ nlp.lm.BackwardBigramModel pos/wsj/ 0.1
-\end{verbatim}
 
-
-which will display the trace similar to this:
-
-\small
-\begin{verbatim}
-# Train Sentences = 43820 (# words = 995024) 
-# Test Sentences = 4869 (# words = 112320)
-Training...
-Perplexity = 74.36070352512667
-Word Perplexity = 86.75945534817288
-Testing...
-Perplexity = 212.41719625520673
-Word Perplexity = 257.1577316631044
-\end{verbatim}
-
-Running the ``\texttt{batch.sh}" script will display the comparison on all POS data sets.
 \section{Discussion}
 
 \emph{RQ1:How does the ``Word Perplexity" of the backward bigram model (for both training and test data) compare to the normal model?}
