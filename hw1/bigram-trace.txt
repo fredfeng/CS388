@@ -1,4 +1,4 @@
-yufeng@yufeng-Precision-T7610:~/courses/CS388/hw1$ java -cp bin/ nlp.lm.BigramModel pos/atis/ 0.1
+sloth$ java -cp bin/ nlp.lm.BigramModel pos/atis/ 0.1
 # Train Sentences = 519 (# words = 3922) 
 # Test Sentences = 58 (# words = 431)
 Training...
@@ -7,21 +7,21 @@ Word Perplexity = 10.5919539986291
 Testing...
 Perplexity = 19.341388622483773
 Word Perplexity = 24.053999598153656
-yufeng@yufeng-Precision-T7610:~/courses/CS388/hw1$ java -cp bin/ nlp.lm.BigramModel pos/wsj/ 0.1
-# Train Sentences = 43820 (# words = 995024) 
-# Test Sentences = 4869 (# words = 112320)
+sloth$ java -cp bin/ nlp.lm.BigramModel pos/wsj/ 0.1
+# Train Sentences = 43820 (# words = 995626) 
+# Test Sentences = 4869 (# words = 111718)
 Training...
-Perplexity = 74.36586651036505
-Word Perplexity = 89.02009755439218
+Perplexity = 74.26799183241482
+Word Perplexity = 88.89008380713945
 Testing...
-Perplexity = 212.59249117790168
-Word Perplexity = 265.49852518723446
-yufeng@yufeng-Precision-T7610:~/courses/CS388/hw1$ java -cp bin/ nlp.lm.BigramModel pos/brown/ 0.1
-# Train Sentences = 47207 (# words = 1036796) 
-# Test Sentences = 5245 (# words = 136174)
+Perplexity = 219.71517777445175
+Word Perplexity = 275.1178149885602
+sloth$ java -cp bin/ nlp.lm.BigramModel pos/brown/ 0.1
+# Train Sentences = 47207 (# words = 1079440) 
+# Test Sentences = 5245 (# words = 93530)
 Training...
-Perplexity = 90.40805510433577
-Word Perplexity = 110.25895602440784
+Perplexity = 93.51927720192262
+Word Perplexity = 113.35954408376686
 Testing...
-Perplexity = 347.93733080926705
-Word Perplexity = 433.7747578404236
+Perplexity = 231.30243689356243
+Word Perplexity = 310.66735613437913
