@@ -43,8 +43,27 @@ Step 4: The probability for the entire sentence will be the sum of all its words
    \Psi = \sum_{i=1}^{n}{ \alpha_{i}}
 \]
  where $n$ is the number of words in current sentence.
-\section{Experiments}
-I implemented the algorithms described in section~\ref{sec:alg} and tested them on the atis, wsj and brown corpora.  Table~\ref{table:train} and Table~\ref{table:test} shows the overall results for word perplexity.
+\section{Experiments}\label{sec:exp}
+
+I implemented the algorithms described in section~\ref{sec:alg} and tested them on the \emph{atis}, \emph{wsj} and \emph{brown} corpora. In this section I will study the experimental results from different aspects.
+
+\textbf{A quick glance}: In my first step, I ran three models on the above data with the default setting from class: using 10\% sentences as the testing data and splitting the weights of the Bigram model and Backward model evenly in the Bidirectional model. Table~\ref{table:train} and Table~\ref{table:test} shows the overall results for word perplexity. The results show that Bidirectional model outperforms other models in all benchmark and it's hard to tell whether the Bigram model is better than the Backward model or the other way around: Backward model is slightly better in \emph{wsj} and \emph{brown} but worse in \emph{atis}.
+
+\textbf{Fractions of sentences in testing set}: In the second step, I re-ran the entire experiment by setting the fraction of testing data from 0.1 to 0.9. For the Bidirectional model, the weights of the Bigram model and Backward model are still split evenly. The goal of this experiment is to evaluate the effectiveness of the above three model in diverse data set.
+
+Figure~\ref{fig:test1}, figure~\ref{fig:test2} and figure~\ref{fig:test3} show the results of \emph{atis}, \emph{wsj} and \emph{brown} respectively. With those mass data, I began to get the big picture of those three models:
+
+\begin{itemize}
+  \item Bidirectional model still outperforms other two models in all different settings;
+  \item For the comparison between the Bigram model and the Backward model, their word perplexity are very closed to each other comparing their differences with the Bidirectional model; Backward model is slightly better in \emph{wsj} and \emph{brown} but worse in \emph{atis};
+  \item If we look at the results closely, it's very interesting that all of those three models reach their optimal value(lowest word perplexity) while using 90\% of testing data.(The Bidirectional model in figure~\ref{fig:test2} is the only exception.) This is a bit counterintuitive to me: the testing result is supposed to be better when we have more training data.
+\end{itemize}
+
+\textbf{Weights of Bigram model in the Bidirectional Model}: In the final step, I evaluated the performance of the Bidirectional model by the following: I fixed the fraction of test data(10\%) and changed the weight of the Bigram model from 0.1 to 0.9. Then I re-ran the Bidirectional model on all the three data set.
+
+Figure~\ref{fig:bi} shows the result of the experiment. For the data set in \emph{wsj} and \emph{brown}, the Bidirectional reaches it optimal solution when the weight is 0.5. On the other hand, \emph{atis} gets the optimal value with the weight of 0.9.
+
+
 
 \begin{table}
 \begin{center}
@@ -70,21 +89,39 @@ brown       & 310.667 & 299.686 & 167.487  \\  \hline
 \end{center}
 \end{table}
 
-The results show that the backward bigram model outperforms the normal bigram model in the \emph{wsj} and \emph{brown} corpora, but worse in the \emph{atis} corpora; Meanwhile, bidirectional bigram model yields the best word perplexity across all POS data sets.
 
 
-\section{Discussion}
+\begin{figure}
+\centering
+\includegraphics[scale=0.5]{test_atis.jpg}
+\caption{Evaluation on different fraction of testing set for atis}\label{fig:test1}
+\end{figure}
 
-\emph{RQ1:How does the ``Word Perplexity" of the backward bigram model (for both training and test data) compare to the normal model?}
-\\
+\begin{figure}
+\centering
+\includegraphics[scale=0.5]{test_wsj.jpg}
+\caption{Evaluation on different fraction of testing set for wsj}\label{fig:test2}
+\end{figure}
 
-Intuitively speaking, given a large corpora, it's hard to tell which model is better since the only difference is the model direction. I think their performances are related to the 
-characteristics of the corpora: the backward model may be better in some corpora but worse otherwise. The results of table~\ref{table:train} and table~\ref{table:test} are consistent with this point. But we still need more data and different parameters to verify this point.
-\\
+\begin{figure}
+\centering
+\includegraphics[scale=0.5]{test_brown.jpg}
+\caption{Evaluation on different fraction of testing set for brown}\label{fig:test3}
+\end{figure}
 
-\emph{RQ2:How does the ``Word Perplexity" of the bidirectional model (for both training and test data) compare to both the backward model and the normal model?}
-\\
+\begin{figure}
+\centering
+\includegraphics[scale=0.5]{bidirect.jpg}
+\caption{Evaluation on different weight of bigramModel}\label{fig:bi}
+\end{figure}
+\section{Conclusion}
 
-Table~\ref{table:train} and Table~\ref{table:test} show that the bidirectional model is strictly better than both the backward model and the normal model in terms of "Word Perplexity". This is also reasonable because the bidirectional algorithm is taking advantage of the knowledge from both sides. When predicting each token, the bidirectional model will have constraints from forward and backward thus the results outperform any of those two. 
+To conclude, based on the results in section~\ref{sec:exp}, the Bidirectional model strictly outperforms other models in all three benchmarks in terms of the word perplexity. This is reasonable because the bidirectional algorithm is taking advantage of the knowledge from both sides. When predicting each token, the bidirectional model has contexts from both forward and backward which leads to a high prediction rate. On the other hand, for the backward model and the normal Bigram model, we can't tell which one is better. Given a corpora with large size, the results in \emph{wsj} and \emph{brown} show that the word perplexity of those two models are quite closed to each other. One reason could be, in natural language, there exists both forward and backward regularity.
+
+Regarding the word perplexity in the bidirectional model, figure~\ref{fig:bi} shows that it could reach an optimal value when the weight of backward and forward models are split evenly.
+
+One interesting observation is, increasing the fraction of training data will not necessarily lead to a higher word perplexity.
+
+
 
 \end{document}
