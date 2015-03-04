@@ -16,12 +16,14 @@ package cc.mallet.fst;
 
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import cc.mallet.types.Instance;
 import cc.mallet.types.InstanceList;
 import cc.mallet.types.Sequence;
-
 import cc.mallet.util.MalletLogger;
 
 /**
@@ -32,7 +34,10 @@ public class TokenAccuracyEvaluator extends TransducerEvaluator
 	private static Logger logger = MalletLogger.getLogger(TokenAccuracyEvaluator.class.getName());
 
 	private HashMap<String,Double> accuracy = new HashMap<String,Double>();
-
+	
+	/*Vocabulary set in training.*/
+	private Set<String> vocabSet = new HashSet<String>();
+	
 	public TokenAccuracyEvaluator (InstanceList[] instanceLists, String[] descriptions) {
 		super (instanceLists, descriptions);
 	}
@@ -56,9 +61,27 @@ public class TokenAccuracyEvaluator extends TransducerEvaluator
   {
 		int numCorrectTokens;
 		int totalTokens;
+		int totalOOV = 0;
+		int totalCorrectOOV = 0;
 
 		Transducer transducer = trainer.getTransducer();
 		totalTokens = numCorrectTokens = 0;
+		
+		
+		if("Training".equals(description)) {
+			for(Iterator<Instance> it = instances.iterator(); it.hasNext();) {
+				Instance inst = it.next();
+		    	Sequence input = (Sequence) inst.getData();
+		    	for (int j = 0; j < input.size(); j++) {
+		    		String str = input.get(j).toString();
+		    		vocabSet.add(str);
+		    	}
+			}
+		} else {
+			assert "Testing".equals(description);
+			assert !vocabSet.isEmpty();
+		}
+		
 		for (int i = 0; i < instances.size(); i++) {
 			Instance instance = instances.get(i);
 			Sequence input = (Sequence) instance.getData();
@@ -70,8 +93,18 @@ public class TokenAccuracyEvaluator extends TransducerEvaluator
 
 			for (int j = 0; j < trueOutput.size(); j++) {
 				totalTokens++;
-				if (trueOutput.get(j).equals(predOutput.get(j)))
+				// get the original input token.
+				String inputStr = input.get(j).toString();
+				if ("Testing".equals(description)
+						&& !vocabSet.contains(inputStr))
+					totalOOV++;
+				
+				if (trueOutput.get(j).equals(predOutput.get(j))) {
 					numCorrectTokens++;
+					if ("Testing".equals(description)
+							&& !vocabSet.contains(inputStr))
+						totalCorrectOOV++;
+				}
 			}
 			//System.err.println ("TokenAccuracyEvaluator "+i+" numCorrectTokens="+numCorrectTokens+" totalTokens="+totalTokens+" accuracy="+((double)numCorrectTokens)/totalTokens);
 		}
@@ -79,6 +112,19 @@ public class TokenAccuracyEvaluator extends TransducerEvaluator
 		//System.err.println ("TokenAccuracyEvaluator accuracy="+acc);
 		accuracy.put(description, acc);
 		logger.info (description +" accuracy="+acc);
+		if("Testing".equals(description)) {
+			// (number of OOV)/(total number of words in testing)
+			double percentOOV = ((double)totalOOV)/totalTokens;
+			// Formula for OOV accuracy is (number of OOV with correct
+			// prediction)/(total number of OOV).
+			double percentCorrectOOV = ((double)totalCorrectOOV)/totalOOV;
+
+			System.out.println("OOV percentage: " + percentOOV);
+			System.out.println("OOV accuracy: " + percentCorrectOOV);
+			System.out.println("Total tokens: " + totalTokens);
+			System.out.println("Total OOV: " + totalOOV);
+			System.out.println("Vocab size:" + vocabSet.size());
+		}
 	}
 
 	/**
