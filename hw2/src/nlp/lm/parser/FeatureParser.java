@@ -14,7 +14,7 @@ import java.util.Arrays;
  */
 public class FeatureParser {
 	
-	public static String[] features = {"caps", "ing", "s"};
+	public static String[] features = {"ing", "s"};
 
 	public static void main(String[] args) throws IOException {
 		System.out.println(args.length + " " + args[0]);
@@ -22,57 +22,83 @@ public class FeatureParser {
 			System.out.println("java -cp bin/ nlp.lm.parser.FeatureParser src tgt");
 			System.exit(0);
 		}
-			
+		
 		String src = args[0];
 		String divider = "===========";
 		String outLoc = args[1];
-		File in = new File(src);
-		FileInputStream fis = new FileInputStream(in);
-
-		// Construct BufferedReader from InputStreamReader
-		BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-
-		String line = null;
-		boolean preEmpty = true;
 		PrintWriter writer;
 		writer = new PrintWriter(outLoc, "UTF-8");
 		
-		while ((line = br.readLine()) != null) {
-			if (line.matches(".*@.*-.*/CD.*"))
-				// @8k1011sx-a-14/CD
-				continue;
-			else if (line.trim().isEmpty())
-				continue;
-			else if (line.contains(divider)) {
-				if (preEmpty)
-					continue;
-				else {
-					preEmpty = true;
-					// dump empty line here.
-					writer.println();
-				}
-			} else {
-				preEmpty = false;
-				for (String str : Arrays.asList(line.split("\\s+"))) {
-					if (str.contains("/")) {
-						String[] words = str.trim().split("/");
-						assert words.length == 2 : line;
-						// dump the actual content.
-						String org = words[0];
-						String content = org;
-						for(int i = 0; i < features.length; i++) {
-							if(org.endsWith(features[i]))
-								content += " " + features[i];
+		File folder = new File(src);
+		File[] listOfFiles = folder.listFiles();
+		Arrays.sort(listOfFiles);
+
+		for (int i = 0; i < listOfFiles.length; i++) {
+			File posFile = listOfFiles[i];
+			if (posFile.isFile()) {
+				System.out.println("File " + posFile.getAbsolutePath());
+				
+				FileInputStream fis = new FileInputStream(posFile);
+
+				// Construct BufferedReader from InputStreamReader
+				BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+				String line = null;
+				boolean preEmpty = true;
+
+				while ((line = br.readLine()) != null) {
+					if (line.matches(".*@.*-.*/CD.*"))
+						// @8k1011sx-a-14/CD
+						continue;
+					else if (line.trim().isEmpty())
+						continue;
+					else if (line.contains(divider)) {
+						if (preEmpty)
+							continue;
+						else {
+							preEmpty = true;
+							// dump empty line here.
+							writer.println();
 						}
-						content += (" " + words[1]);
-						writer.println(content);
+					} else {
+						preEmpty = false;
+						for (String str : Arrays.asList(line.split("\\s+"))) {
+							if (str.contains("/")) {
+								int idx = str.lastIndexOf('/');
+								assert idx > 0;
+								String part1 = str.substring(0, idx);
+								String part2 = str.substring(idx+1, str.length());
+								// dump the actual content.
+								String content = part1;
+								
+								for(int j = 0; j < features.length; j++) {
+									if(part1.endsWith(features[j]))
+										content += " " + features[j];
+								}
+								
+								//Caps?
+								if(Character.isUpperCase(part1.charAt(0))) {
+									content += " " + "caps";
+								}
+								
+								content += (" " + part2);
+								writer.println(content);
+								
+								if(str.equals("./.")) {
+									writer.println();
+									preEmpty = true;
+								}
+							}
+						}
+
 					}
 				}
-
+				br.close();
+				if(!preEmpty)
+					writer.println();
 			}
 		}
-		br.close();
 		writer.close();
+	
 	}
 		/*
 		http://grammar.about.com/od/words/a/comsuffixes.htm

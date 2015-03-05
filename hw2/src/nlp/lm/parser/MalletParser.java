@@ -63,12 +63,19 @@ public class MalletParser {
 								String part2 = str.substring(idx+1, str.length());
 								// dump the actual content.
 								writer.println(part1 + " " + part2);
+								
+								if(str.equals("./.")) {
+									writer.println();
+									preEmpty = true;
+								}
 							}
 						}
 
 					}
 				}
 				br.close();
+				if(!preEmpty)
+					writer.println();
 			}
 		}
 		writer.close();
