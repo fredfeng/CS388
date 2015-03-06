@@ -1,7 +1,3 @@
-start_time=`date +%s`
-#seed=`shuf -i 1000-10000 -n 1`
-#java -ea -cp bin/:lib/mallet-deps.jar cc.mallet.fst.HMMSimpleTagger --random-seed $seed --train true --model-file model_file --training-proportion 0.8 --test lab test.txt
-#java -ea -cp bin/:lib/mallet-deps.jar cc.mallet.fst.SimpleTagger --train true --model-file model_file --training-proportion 0.8 --test lab test.txt
 
 tagger=``
 
@@ -13,13 +9,19 @@ else
     tagger=cc.mallet.fst.HMMSimpleTagger
 fi;
 
-for i in `seq 101 110`;
-do
-    echo Begin trial-----------: $i
-    #seed=`shuf -i 1000-10000 -n 1`
-    echo random seed: $i
-    java -ea -cp bin/:lib/mallet-deps.jar $tagger --random-seed $i --train true --model-file model_file --training-proportion 0.8 --test lab $2
-    echo End trial-----------: $i
-done    
-end_time=`date +%s`
-echo execution time was `expr $end_time - $start_time` s.
+java -ea -cp bin/:lib/mallet-deps.jar $tagger --train true --model-file model_file --training-proportion 1.0 --test lab $2 $3
+
+
+echo ----Summary------------------------
+echo Using model: $1
+echo training set: $2
+echo testing set: $3
+
+#-------------------------------------------------------
+#java -cp "mallet/class:mallet/lib/mallet-deps.jar" 
+#cc.mallet.fst.HMMSimpleTagger
+#--train true --model-file model_file
+#--training-proportion 1.0
+#--test lab $train_file $test_file
+#Just make sure to set training-proportion to 1.0 and put two files at the end.
+#---------------------------------------------------------
