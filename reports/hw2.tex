@@ -1,0 +1,190 @@
+\documentclass[10pt]{report}
+\usepackage{latexsym}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{siunitx}
+
+\title{Homework 2: Part-of-Speech Tagging with HMMs and CRFs}
+\author{Yu Feng}
+\date{3-6-2015}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+In this homework, my task is to produce both a ``backward" bigram model and a bidirectional model based on the sample code of a normal bigram model. 
+ 
+\section{Algorithm}\label{sec:alg}
+
+\subsection{Backward Bigram Model}
+
+The algorithm for the backward bigram model is almost identical to the normal bigram model except for the model direction. So what I need to do is to swap the model direction for both the training and testing data and then invoke the original corresponding functions. 
+
+
+\subsection{Bidirectional Bigram Model}
+
+Here are the steps to build the bidirectional bigram model:
+
+Step 1: Create an instance of the bidirectional model which has references to the instances of the bigram model and the backward bigram model;
+
+Step 2: Train each model separately by invoking its own training method using the given data;
+
+Step 3: When determining the probability of each word($\alpha_i$) using the bidirectional model, linearly interpolate the predicted results of the bigram model and the backward bigram model based on the following equation:
+\[
+  \alpha_{i} = log(\lambda_{1} * \beta_{i} + \lambda_{2} * \gamma_{i})
+\] 
+Here, $\beta_{i}$ and $\gamma_{i}$ are the probability predicted by the bigram model and the backward bigram model, respectively. $\lambda_{1}$, $\lambda_{2}$ are their corresponding weight. I weight them equally in the experiment. 
+
+Step 4: The probability for the entire sentence will be the sum of all its words:
+\[
+   \Psi = \sum_{i=1}^{n}{ \alpha_{i}}
+\]
+ where $n$ is the number of words in current sentence.
+\section{Experiments}\label{sec:exp}
+
+\begin{table}
+  \begin{tabular}{lSSSSSSSSSS}
+    \toprule
+    \multirow{3}{*}{Seed} &
+      \multicolumn{3}{c}{Training Accuracy} &
+      \multicolumn{3}{c}{Testing Accuracy} &
+      \multicolumn{3}{c}{OOV Accuracy} &
+      \multicolumn{1}{c}{OOV Percentage} \\
+      & {HMM} & {CRF} & {CRF+} &  {HMM} & {CRF} & {CRF+} &  {HMM} & {CRF} & {CRF+} &  {ALL} \\
+      \midrule
+    101 & 0.889 & 0.999 & 0.999 & 0.845 & 0.928 & 0.942 & 0.132 & 0.289 & 0.421 & 0.042  \\
+    102 & 0.884 & 0.999 & 0.999 & 0.853 & 0.932 & 0.940 & 0.214 & 0.143 & 0.286 & 0.030  \\
+    103 & 0.889 & 0.999 & 0.999 & 0.838 & 0.903 & 0.917 & 0.176 & 0.176 & 0.353 & 0.038 \\
+    104 & 0.891 & 0.999 & 0.999 & 0.868 & 0.924 & 0.938 & 0.152 & 0.333 & 0.545 & 0.040  \\
+    105 & 0.896 & 0.999 & 0.999 & 0.834 & 0.906 & 0.909 & 0.121 & 0.152 & 0.303 & 0.038  \\
+    106 & 0.891 & 0.999 & 0.999 & 0.839 & 0.910 & 0.936 & 0.097 & 0.194 & 0.355 & 0.037 \\
+    107 & 0.885 & 0.998 & 0.998 & 0.875 & 0.933 & 0.947 & 0.273 & 0.182 & 0.364 & 0.026  \\
+    108 & 0.892 & 0.999 & 0.999 & 0.870 & 0.935 & 0.945 & 0.167 & 0.233 & 0.333 & 0.036  \\
+    109 & 0.886 & 0.999 & 0.999 & 0.855 & 0.924 & 0.935 & 0.226 & 0.258 & 0.387 & 0.037  \\
+    110 & 0.880 & 0.999 & 0.999 & 0.886 & 0.947 & 0.959 & 0.423 & 0.462 & 0.692 & 0.030 \\
+    Avg & 2.1 & 2.1 & 2.1 & 2.1 & 2.1 & 2.1 & 2.1 & 2.1 & 2.1 & 2.1 \\
+
+    \bottomrule
+  \end{tabular}
+      \caption{\small atis.}\label{table:atis}
+
+\end{table}
+
+\begin{table}
+  \begin{tabular}{lSSSSSS}
+    \toprule
+       \multirow{1}{*}{Corpus} &
+    	  \multicolumn{1}{c}{Model} &
+      \multicolumn{1}{c}{Training Accuracy} &
+      \multicolumn{1}{c}{Testing Accuracy} &
+      \multicolumn{1}{c}{OOV Accuracy} &
+      \multicolumn{1}{c}{OOV Percentage} &
+            \multicolumn{1}{c}{Running Time} \\
+
+      \midrule
+   atis & HMM & ? & ? & ? & ? & ? \\
+   atis & CRF & ? & ? & ? & ? & ? \\
+   atis & {CRF+} & ? & ? & ? & ? & ? \\
+    \hline
+   wsj & {HMM} & 0.861 & 0.785 & 0.380 & 0.153 & 52.78s \\
+   wsj & {CRF} & 0.993 & 0.803 & 0.473 & 0.153 & 4502.92 \\
+   wsj & {CRF+} & 0.992 & 0.862 & 0.701 & 0.153 & 4830.00 \\
+
+    \bottomrule
+  \end{tabular}
+      \caption{\small atis,wsj.}\label{table:basic}
+\end{table}
+
+
+\begin{table}
+  \begin{tabular}{lSSSSSS}
+    \toprule
+       \multirow{1}{*}{Corpus} &
+    	  \multicolumn{1}{c}{Model} &
+      \multicolumn{1}{c}{Training Accuracy} &
+      \multicolumn{1}{c}{Testing Accuracy} &
+      \multicolumn{1}{c}{OOV Accuracy} &
+      \multicolumn{1}{c}{OOV Percentage} &
+            \multicolumn{1}{c}{Running Time} \\
+   wsj & {HMM} & 0.899 & 0.865 & 0.408 & 0.081 & 401.63s \\
+   wsj & {CRF+} & 0.992 & 0.912 & 0.747 & 0.081 & 46225.53 \\
+
+    \bottomrule
+  \end{tabular}
+    \caption{\small wsj234--567.}\label{table:wsj234}
+
+\end{table}
+
+\begin{table}
+  \begin{tabular}{lSSSSSS}
+    \toprule
+       \multirow{1}{*}{Corpus} &
+    	  \multicolumn{1}{c}{Model} &
+      \multicolumn{1}{c}{Training Accuracy} &
+      \multicolumn{1}{c}{Testing Accuracy} &
+      \multicolumn{1}{c}{OOV Accuracy} &
+      \multicolumn{1}{c}{OOV Percentage} &
+            \multicolumn{1}{c}{Running Time} \\
+   wsj & {HMM} & 0.927 & 0.905 & 0.429 & 0.045 & 1095.60s \\
+   wsj & {CRF+} & 0.992 & 0.912 & 0.747 & 0.081 & 46225.53 \\
+
+    \bottomrule
+  \end{tabular}
+  \caption{\small HMM(0-9) CRF(234) test 24.}\label{table:wsj24}
+\end{table}
+
+\begin{table}
+  \begin{tabular}{lSSSSSS}
+    \toprule
+       \multirow{1}{*}{Corpus} &
+    	  \multicolumn{1}{c}{Model} &
+      \multicolumn{1}{c}{Training Accuracy} &
+      \multicolumn{1}{c}{Testing Accuracy} &
+      \multicolumn{1}{c}{OOV Accuracy} &
+      \multicolumn{1}{c}{OOV Percentage} &
+            \multicolumn{1}{c}{Running Time} \\
+   wsj & {CRF} & 0.993 & 0.803 & 0.473 & 0.153 & 4502.92 \\
+   wsj & {CRF-cap} & 0.988 & 0.835 & 0.611 & 0.153 & 5190.00 \\
+   wsj & {CRF+} & 0.992 & 0.862 & 0.701 & 0.153 & 4830.00 \\
+    \bottomrule
+  \end{tabular}
+  \caption{\small withoiut caps.}\label{table:nocap}
+\end{table}
+
+
+\begin{table}
+  \begin{tabular}{lSSSSSS}
+    \toprule
+       \multirow{1}{*}{Corpus} &
+    	  \multicolumn{1}{c}{Model} &
+      \multicolumn{1}{c}{Training Accuracy} &
+      \multicolumn{1}{c}{Testing Accuracy} &
+      \multicolumn{1}{c}{OOV Accuracy} &
+      \multicolumn{1}{c}{OOV Percentage} &
+            \multicolumn{1}{c}{Running Time} \\
+
+      \midrule
+   wsj & HMM250 & 0.861 & 0.785 & 0.380 & ? & ? \\
+   wsj & HMM500 & ? & ? & ? & ? & ? \\
+   wsj & HMM750 & 0.861 & 0.785 & 0.380 & ? & ? \\
+    \hline
+   wsj & {CRF250} & 0.993 & 0.803 & 0.473 & 0.153 & 52.78s \\
+   wsj & {CRF500} & 0.993 & 0.803 & 0.473 & 0.153 & 4502.92 \\
+   wsj & {CRF750} & 0.992 & 0.862 & 0.701 & 0.153 & 4830.00 \\
+
+    \bottomrule
+  \end{tabular}
+      \caption{\small atis,wsj.}\label{table:iterate}
+\end{table}
+
+\section{Conclusion}
+TBD.
+
+
+\end{document}
