@@ -31,33 +31,47 @@ HMMs are generative models that are used to infer the ``hidden" states based on 
 \subsection{Conditional Random Fields(CRFs)}
 CRFs are discriminative models that are designed and trained to maximize the performance of POS tagging. Since they only model the conditional distribution of the labels with respect to a number of features, given enough training data and time, they can outperform HMMs. 
 
+\section{Preprocessing}
+All the raw data from the Penn Treebank need to be converted to Mallet's format. Basically there are two cases for putting separators.
+\begin{itemize}
+  \item ``===========" as a separator: This case is trivial.
+  \item A period following with a ``blank line". If we naively use the "blank line" as the separator, we will get the wrong result for the following sentence:
+
+\small
+\begin{verbatim}
+[ I/PRP ]
+have/VBP 
+[ two/CD friends/NNS ]
+
+[ that/WDT ]
+would/MD like/VB to/TO visit/VB 
+[ me/PRP ]
+on/IN 
+[ Wednesday/NNP ]
+here/RB in/IN 
+[ Washington/NNP D/NNP C/NNP one/CD ]
+of/IN 
+[ them/PRP ]
+lives/VBZ in/IN 
+[ Denver/NNP ]
+and/CC 
+[ the/DT other/JJ lives/VBZ ]
+in/IN 
+[ Miami/NNP ]
+\end{verbatim}
+\end{itemize}
 \section{Experiments}\label{sec:exp}
-In this section I will design different experiments of POS tagging to evaluate the performance of HMMs and CRFs from different aspects. Here are some legends in the table:
-{\bf \emph{CRF+}} denotes the traditional CRF with all the additional orthographic features. There are total three features in it: capitalization(caps) and two common English suffixes(-ing and -s). {\bf \emph{CRF-cap}} includes two suffixes(-ing and -s) while {\bf \emph{CRF-cap-ing}} only includes one suffix(-s).  {\bf \emph{Model-number}} denotes the model with different number of iterations. For instance, {\bf \emph{CRF-75}} denote the CRF model with 75 iterations. All the experiments are ran on the server at Stanford University(\texttt{kuhu2.stanford.edu}).
+In this section I will design different experiments of POS tagging to evaluate the performance of HMMs and CRFs from different aspects. Before I go into the details, here are some legends in the table:
+{\bf \emph{CRF+}} denotes the traditional CRF with all the additional orthographic features that are used in this report. There are three features in total: capitalization(caps) and two common English suffixes(-ing and -s). {\bf \emph{CRF-cap}} includes two suffixes(-ing and -s) while {\bf \emph{CRF-cap-ing}} only includes one suffix(-s).  {\bf \emph{Model-number}} denotes the model with different number of iterations. For instance, {\bf \emph{CRF-75}} denote the CRF model with 75 iterations. The experiments assume that both the training and testing data are parsed to the Mallet's format(Please refer to the README for more information). All the experiments were ran on the server at Stanford University(\texttt{kuhu2.stanford.edu}).
 
 
 
 \subsection{Small benchmarks}
 {\bf \emph{Basic characteristics.}} First I ran all the three models(HMM, CRF and CRF+) on two small corpus and the out-of-vocabulary items(OOV) are calculated separately. Table~\ref{table:basic} shows the overall results. For the ATIS corpus, I got the average results over 10 random training/test splits of the data by setting the parameter \emph{--random-seed} from 101 to 110. The detail results of those 10 trials can be referred to table~\ref{table:atis}.  For the WSJ corpus, I used section 00 as the training set and section 01 as the testing set.
 
-The results in Table~\ref{table:basic} show that both the CRF and CRF+ need much more time in training and testing compared to the HMM. For instance, in the WSJ corpus, the CRF spent 85X more time than the HMM. However, the rewards are also promising: for those two corpus, CRF outperforms HMM in both training and testing accuracy. If we only consider the accuracy of OOV, the CRF+ performs even better. The reasons are: (i)It is easy for a discriminative model to take those additional features into account and take advantage on them by computing the conditional probability; (ii)HMM needs to compute the joint distribution of all labels and has poor performance on OOV.
+One of the biggest differences between the HMM and CRF is the running time. The results in Table~\ref{table:basic} show that both the CRF and CRF+ need much more time in training and testing compared to the HMM. For instance, in the WSJ corpus, the CRF spent 85x more time than the HMM. This is because the CRF model need to spend much time on inferring its parameters.
 
- Since the ATIS corpus is too small, I only ran experiments on the WSJ corpus for the remaining sections.  
- 
-{\bf \emph{Number of iterations.}} In addition to the default iterations(500), I also varied the iterations by setting the parameter \emph{--iterations} to 25 and 75 then ran the models again. The results in table~\ref{table:iterate} show that (i) For the HMM, the number of iterations does not affect its training and testing accuracy, but the running time increased as I increased the number. (ii) The CRF is quite sensitive to the iterations: its accuracy(Training, testing and OOV) and running time increased as I increased the number of iterations. 
-
-{\bf \emph{Orthographic features.}} To evaluate the effectiveness of the extra orthographic features in the CRF model, I ran four variants of CRFs to observe how do them increase the accuracy by adding the features: (i) Original CRF; (ii) CRF-cap-ing: CRF with ``-s" suffix; (iii) CRF-cap: CRF with ``-s" and ``-ing" suffixes; (iv) CRF+: CRF with ``-s", ``-ing" and capitalization. From the results in table~\ref{table:nocap} I get the following insight: In terms of accuracy(training, testing and OOV), the features of ``-s" suffix and capitalization have more impact compared with the ``-ing" suffix. I think a good feature is related to its frequency in the corpus.
-
-\subsection{Big benchmarks}
-With the help of the cutting edge server, I managed to run the models on some large corpus. Since the CRF+ will always outperform the CRF, I ignored the results of CRF for the sake of time.
-
-{\bf \emph{Same corpus.}} I trained the HMM and the CRF+ on section 02, 03 and 04 in the WSJ corpus and tested them on section 05, 06 and 07. The results in table~\ref{table:wsj234} show that  by learning more data, both the HMM and CRF+ improve a lot in terms of accuracy. For the HMM, there is only a little improvement on its OOV accuracy because of the limit of generative models. 
-
-Since the running time of HMM is much shorter than the CRF+, I increased the training set(section 0 to section 9) of HMM and tested it on a brand new section(section 24). The CRF+ is still trained on section 2, 3 and 4. The result in table~\ref{table:wsj24} is very interesting: Even though the HMM is worse in the OOV accuracy because of its known limitation, its testing accuracy outperforms the CRF+! Even a less fancy model could yield great result in the present of big data.
-
-{\bf \emph{Different corpus.}} I am also very curious about the accuracy across different corpus so I extended previous experiment by the following: the HMM model was trained on section 0 to 9 and the CRF+ was trained on section 2 to 4, both from the WSJ corpus. Then I tested those two models on a brand new corpus: section ``ca" in the brown corpus. The results in table~\ref{table:brown} show (i) The testing accuracy for both HMM and CRF+ is still very good for different corpus; (ii) Their accuracy does not reduce too much, which means that it's plausible to train a specific model with big data and test it across multiple corpus.
-
-All the above results show that even though the CRF+ took significant amount of time, it's very useful for the sake of accuracy.
+The second big difference between the HMM and CRF is the accuracy on OOV and the rewards of running time on CRF are promising: for those two corpus, CRF outperforms HMM in both training and testing accuracy. If we only consider the accuracy of OOV, the CRF+ performs even better. The reasons are: (i) It is easy for a discriminative model to take those additional features into account and take advantage on them by computing the conditional probability; (ii) HMM needs to compute the joint distribution of all labels and has poor performance on OOV.
 \begin{table}
 \small
   \begin{tabular}{lSSSSSSSSSS}
@@ -84,7 +98,7 @@ All the above results show that even though the CRF+ took significant amount of 
 
     \bottomrule
   \end{tabular}
-      \caption{\small atis.}\label{table:atis}
+      \caption{The results of ATIS over 10 random training/test splits of the data.}\label{table:atis}
 
 \end{table}
 
@@ -99,37 +113,22 @@ All the above results show that even though the CRF+ took significant amount of 
             \multicolumn{1}{c}{Running Time} \\
 
       \midrule
-   atis & HMM & 0.888 & 0.856 & 0.198  & 4.19 \\
-   atis & CRF & 0.999 & 0.924 & 0.242  & 64.00 \\
-   atis & {CRF+} & 0.999 &0.937 & 0.404  & 57.22 \\
+   ATIS & HMM & 0.888 & 0.856 & 0.198  & 4.19 \\
+   ATIS & CRF & 0.999 & 0.924 & 0.242  & 64.00 \\
+   ATIS & {CRF+} & 0.999 &0.937 & 0.404  & 57.22 \\
     \hline
-   wsj & {HMM} & 0.861 & 0.785 & 0.380 & 52.78 \\
-   wsj & {CRF} & 0.993 & 0.803 & 0.473  & 4502.92 \\
-   wsj & {CRF+} & 0.992 & 0.862 & 0.701  & 4830.00 \\
+   WSJ & {HMM} & 0.861 & 0.785 & 0.380 & 52.78 \\
+   WSJ & {CRF} & 0.993 & 0.803 & 0.473  & 4502.92 \\
+   WSJ & {CRF+} & 0.992 & 0.862 & 0.701  & 4830.00 \\
 
     \bottomrule
   \end{tabular}
-      \caption{\small atis(0.035),wsj(0.153).}\label{table:basic}
+      \caption{ Average results of ATIS based on table~\ref{table:atis} with an OOV percentage of 0.035; For WSJ, section 00 is for training and 01 for testing, with an OOV percentage of 0.153.}\label{table:basic}
 \end{table}
 
-\begin{table}
-  \begin{tabular}{lSSSSSS}
-    \toprule
-    	  \multicolumn{1}{c}{Model} &
-      \multicolumn{1}{c}{Training Accuracy} &
-      \multicolumn{1}{c}{Testing Accuracy} &
-      \multicolumn{1}{c}{OOV Accuracy} &
-            \multicolumn{1}{c}{Running Time} \\
-     \hline
-    {CRF} & 0.993 & 0.803 & 0.473 & 4502.92 \\
-    {CRF-cap-ing} & 0.992 & 0.830 & 0.581 & 4783.18 \\
-    {CRF-cap} & 0.988 & 0.835 & 0.611 & 5190.00 \\
-    {CRF+} & 0.992 & 0.862 & 0.701 & 4830.00 \\
-    \bottomrule
-  \end{tabular}
-  \caption{\small withoiut caps(0.153 oov).}\label{table:nocap}
-\end{table}
-
+ Since the ATIS corpus is too small, I only ran experiments on the WSJ corpus for the remaining sections.  
+ 
+{\bf \emph{Number of iterations.}} In addition to the default iterations(500), I also varied the iterations by setting the parameter \emph{--iterations} to 25 and 75 then ran the models again. The results in table~\ref{table:iterate} show that (i) For the HMM, the number of iterations does not affect its training and testing accuracy, but the running time increased as I increased the number. (ii) The CRF is quite sensitive to the iterations: its accuracy(Training, testing and OOV) and running time increased as I increased the number of iterations. The reason of the difference is because the CRF needs a number of iterations to refine each parameter and make it converge while the HMM only needs a few iterations to compute the joint distribution of all labels.
 
 \begin{table}
   \begin{tabular}{lSSSSSS}
@@ -151,8 +150,42 @@ All the above results show that even though the CRF+ took significant amount of 
 
     \bottomrule
   \end{tabular}
-      \caption{\small wsj iterate(0.153).}\label{table:iterate}
+      \caption{Results of different iterations on WSJ. Section 00 is for training and 01 for testing, with an OOV percentage of 0.153.}\label{table:iterate}
 \end{table}
+
+
+{\bf \emph{Orthographic features.}} To evaluate the effectiveness of the extra orthographic features in the CRF model, I ran four variants of CRFs to observe how do them increase the accuracy by adding the features: (i) Original CRF; (ii) CRF-cap-ing: CRF with ``-s" suffix; (iii) CRF-cap: CRF with ``-s" and ``-ing" suffixes; (iv) CRF+: CRF with ``-s", ``-ing" and capitalization. From the results in table~\ref{table:nocap} I get the following insight: In terms of accuracy(training, testing and OOV), the features of ``-s" suffix and capitalization have more impact compared with the ``-ing" suffix. But in general, I think whether a feature is good or not depends on its frequency in the corpus. 
+
+One strange observation in this experiment: Intuitively, as we increase the number of features to the CRF, the running time of the model should keep increasing too, since the model has more parameters need to take care. But the running time of CRF+(4830.00s) is less than CRF-cap(5190.00s), which contradicts my assumption and I don't know the reason.
+
+
+\begin{table}
+  \begin{tabular}{lSSSSSS}
+    \toprule
+    	  \multicolumn{1}{c}{Model} &
+      \multicolumn{1}{c}{Training Accuracy} &
+      \multicolumn{1}{c}{Testing Accuracy} &
+      \multicolumn{1}{c}{OOV Accuracy} &
+            \multicolumn{1}{c}{Running Time} \\
+     \hline
+    {CRF} & 0.993 & 0.803 & 0.473 & 4502.92 \\
+    {CRF-cap-ing} & 0.992 & 0.830 & 0.581 & 4783.18 \\
+    {CRF-cap} & 0.988 & 0.835 & 0.611 & 5190.00 \\
+    {CRF+} & 0.992 & 0.862 & 0.701 & 4830.00 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Results of extra orthographic features on WSJ. Section 00 is for training and 01 for testing, with an OOV percentage of 0.153.}\label{table:nocap}
+\end{table}
+
+
+\subsection{Big benchmarks}
+With the help of the cutting edge server, I managed to run the models on some large corpus. Since the CRF+ will always outperform the CRF, I ignored the results of CRF for the sake of time.
+
+{\bf \emph{Same corpus.}} I trained the HMM and the CRF+ on section 02, 03 and 04 in the WSJ corpus and tested them on section 05, 06 and 07. The results in table~\ref{table:wsj234} show that  by learning more data, both the HMM and CRF+ improve a lot in terms of accuracy. For the HMM, there is only a little improvement on its OOV accuracy because of the limit of generative models. 
+
+Since the running time of HMM is much shorter than the CRF+, I increased the training set(section 00 to section 09) of HMM and tested it on a brand new section(section 24). The CRF+ is still trained on section 02, 03 and 04. The results in table~\ref{table:wsj24} are very interesting: Even though the HMM is worse in the OOV accuracy because of its known limitation, its testing accuracy outperforms the CRF+! Even a less fancy model could yield great result in the present of big data.
+
+
 
 \begin{table}
   \begin{tabular}{lSSSSSS}
@@ -168,7 +201,7 @@ All the above results show that even though the CRF+ took significant amount of 
 
     \bottomrule
   \end{tabular}
-    \caption{\small wsj234--567(0.081).}\label{table:wsj234}
+    \caption{Results of larger data on WSJ. Section 02-04 are for training and 05-07 for testing, with an OOV percentage of 0.081.}\label{table:wsj234}
 
 \end{table}
 
@@ -188,8 +221,13 @@ All the above results show that even though the CRF+ took significant amount of 
 
     \bottomrule
   \end{tabular}
-  \caption{\small HMM(0-9) CRF(234) test 24.}\label{table:wsj24}
+  \caption{Results of larger data on WSJ. The HMM is trained on section 00-09 and the CRF is trained on section 02-04. Both of two  models are tested on section 24.}\label{table:wsj24}
 \end{table}
+
+{\bf \emph{Different corpus.}} I was also very curious about the accuracy across different corpus so I extended previous experiment by the following: the HMM model was trained on section 00 to 09 and the CRF+ was trained on section 02 to 04, both from the WSJ corpus. Then I tested those two models on a brand new corpus: section ``ca" in the brown corpus. The results in table~\ref{table:brown} show (i) The testing accuracy for both HMM and CRF+ is still very good for different corpus; (ii) Their accuracy does not reduce too much, which means that it's plausible to train a specific model with big data and test it across multiple corpus.
+
+All the above results show that even though the CRF/CRF+ took significant amount of time than the HMM, their improvement on accuracy is quite promising, especially for OOV. This demonstrates the advantage of discriminative models over generative models.
+
 
 \begin{table}
 \small
@@ -207,11 +245,7 @@ All the above results show that even though the CRF+ took significant amount of 
 
     \bottomrule
   \end{tabular}
-  \caption{\small HMM(0-9) CRF(234) test brown-ca.}\label{table:brown}
+  \caption{Results of larger data on different corpus. The HMM is trained on section 00-09 and the CRF is trained on section 02-04. Both of two  models are tested on section ``ca"  of BROWN.}\label{table:brown}
 \end{table}
-
-\section{Conclusion}
-TBD.
-
 
 \end{document}

@@ -1,0 +1,37 @@
+HW2-------POS tagging
+
+1. Compile.
+   Assume you have lib/mallet-deps.jar in current folder;
+   Run ./compile.sh;
+   ./bin/ contains all the .class files.
+
+2. Parser.
+   Normal parser:
+   java -cp bin/ nlp.lm.parser.MalletParser src tgt
+   where 
+       src:The source ***folder*** that contains a set of .pos files; 
+       tgt:The target file of Mallet's format.
+
+   For instance, the following command 
+       java -cp bin/ nlp.lm.parser.MalletParser ./pos/wsj/00/ wsj00.txt
+   will parse all the .pos files of section 00 and dump the right format to wsj00.txt.
+
+
+   Features parser:
+   java -cp bin/ nlp.lm.parser.FeatureParser src tgt
+   is similar to MalletParser execept that it will dump the extra orthographic features to the target file. Current I only consider three features: (i) Capitalization; (ii) "-s" suffix; (iii) "-ing" suffix. Those features are hard-coded in the program.
+
+3. Execute.
+    Using ./atis.sh and ./wsj.sh to run the experiment with different settings. Here are some examples:
+
+    Assume you have parsed the data in step 2 correctly.
+
+    /***Running experiment for HMM on ATIS***/
+    time ./atis.sh hmm posMallet/atis/atis.txt
+
+    /***Running experiment for CRF by training on wsj00 and testing on wsj01**/
+    time ./wsj.sh crf posMallet/wsj/wsj00.txt posMallet/wsj/wsj01.txt
+
+    You can also reproduce the entire results of the report by executing ./run.sh. If you have enough time.
+
+
