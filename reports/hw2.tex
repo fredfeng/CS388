@@ -1,4 +1,4 @@
-\documentclass[10pt]{report}
+\documentclass[10pt]{article}
 \usepackage{latexsym}
 \usepackage{natbib}
 \usepackage{graphicx}
@@ -18,44 +18,55 @@
 \maketitle
 
 \section{Introduction}
-In this homework, my task is to produce both a ``backward" bigram model and a bidirectional model based on the sample code of a normal bigram model. 
+POS tagging is the process of annotating each word in a sentence with a part-of-speech marker based on either its definition or context.
+
+In this report, I will do the POS tagging task in some real-world data from the Penn Treebank. In particular, I will explore the performance of Hidden Markov Models(HMMs) and Conditional Random Fields(CRFs) through multiple experiments.
  
-\section{Algorithm}\label{sec:alg}
+\section{Two models for POS tagging}\label{sec:alg}
 
-\subsection{Backward Bigram Model}
+\subsection{Hidden Markov Models(HMMs)}
+HMMs are generative models that are used to infer the ``hidden" states based on current observations. They fully model the joint distribution of labels and are not directly designed to maximizing the performance of POS tagging.
 
-The algorithm for the backward bigram model is almost identical to the normal bigram model except for the model direction. So what I need to do is to swap the model direction for both the training and testing data and then invoke the original corresponding functions. 
 
+\subsection{Conditional Random Fields(CRFs)}
+CRFs are discriminative models that are designed and trained to maximize the performance of POS tagging. Since they only model the conditional distribution of the labels with respect to a number of features, given enough training data and time, they can outperform HMMs. 
 
-\subsection{Bidirectional Bigram Model}
-
-Here are the steps to build the bidirectional bigram model:
-
-Step 1: Create an instance of the bidirectional model which has references to the instances of the bigram model and the backward bigram model;
-
-Step 2: Train each model separately by invoking its own training method using the given data;
-
-Step 3: When determining the probability of each word($\alpha_i$) using the bidirectional model, linearly interpolate the predicted results of the bigram model and the backward bigram model based on the following equation:
-\[
-  \alpha_{i} = log(\lambda_{1} * \beta_{i} + \lambda_{2} * \gamma_{i})
-\] 
-Here, $\beta_{i}$ and $\gamma_{i}$ are the probability predicted by the bigram model and the backward bigram model, respectively. $\lambda_{1}$, $\lambda_{2}$ are their corresponding weight. I weight them equally in the experiment. 
-
-Step 4: The probability for the entire sentence will be the sum of all its words:
-\[
-   \Psi = \sum_{i=1}^{n}{ \alpha_{i}}
-\]
- where $n$ is the number of words in current sentence.
 \section{Experiments}\label{sec:exp}
+In this section I will design different experiments of POS tagging to evaluate the performance of HMMs and CRFs from different aspects. Here are some legends in the table:
+{\bf \emph{CRF+}} denotes the traditional CRF with all the additional orthographic features. There are total three features in it: capitalization(caps) and two common English suffixes(-ing and -s). {\bf \emph{CRF-cap}} includes two suffixes(-ing and -s) while {\bf \emph{CRF-cap-ing}} only includes one suffix(-s).  {\bf \emph{Model-number}} denotes the model with different number of iterations. For instance, {\bf \emph{CRF-75}} denote the CRF model with 75 iterations. All the experiments are ran on the server at Stanford University(\texttt{kuhu2.stanford.edu}).
 
+
+
+\subsection{Small benchmarks}
+{\bf \emph{Basic characteristics.}} First I ran all the three models(HMM, CRF and CRF+) on two small corpus and the out-of-vocabulary items(OOV) are calculated separately. Table~\ref{table:basic} shows the overall results. For the ATIS corpus, I got the average results over 10 random training/test splits of the data by setting the parameter \emph{--random-seed} from 101 to 110. The detail results of those 10 trials can be referred to table~\ref{table:atis}.  For the WSJ corpus, I used section 00 as the training set and section 01 as the testing set.
+
+The results in Table~\ref{table:basic} show that both the CRF and CRF+ need much more time in training and testing compared to the HMM. For instance, in the WSJ corpus, the CRF spent 85X more time than the HMM. However, the rewards are also promising: for those two corpus, CRF outperforms HMM in both training and testing accuracy. If we only consider the accuracy of OOV, the CRF+ performs even better. The reasons are: (i)It is easy for a discriminative model to take those additional features into account and take advantage on them by computing the conditional probability; (ii)HMM needs to compute the joint distribution of all labels and has poor performance on OOV.
+
+ Since the ATIS corpus is too small, I only ran experiments on the WSJ corpus for the remaining sections.  
+ 
+{\bf \emph{Number of iterations.}} In addition to the default iterations(500), I also varied the iterations by setting the parameter \emph{--iterations} to 25 and 75 then ran the models again. The results in table~\ref{table:iterate} show that (i) For the HMM, the number of iterations does not affect its training and testing accuracy, but the running time increased as I increased the number. (ii) The CRF is quite sensitive to the iterations: its accuracy(Training, testing and OOV) and running time increased as I increased the number of iterations. 
+
+{\bf \emph{Orthographic features.}} To evaluate the effectiveness of the extra orthographic features in the CRF model, I ran four variants of CRFs to observe how do them increase the accuracy by adding the features: (i) Original CRF; (ii) CRF-cap-ing: CRF with ``-s" suffix; (iii) CRF-cap: CRF with ``-s" and ``-ing" suffixes; (iv) CRF+: CRF with ``-s", ``-ing" and capitalization. From the results in table~\ref{table:nocap} I get the following insight: In terms of accuracy(training, testing and OOV), the features of ``-s" suffix and capitalization have more impact compared with the ``-ing" suffix. I think a good feature is related to its frequency in the corpus.
+
+\subsection{Big benchmarks}
+With the help of the cutting edge server, I managed to run the models on some large corpus. Since the CRF+ will always outperform the CRF, I ignored the results of CRF for the sake of time.
+
+{\bf \emph{Same corpus.}} I trained the HMM and the CRF+ on section 02, 03 and 04 in the WSJ corpus and tested them on section 05, 06 and 07. The results in table~\ref{table:wsj234} show that  by learning more data, both the HMM and CRF+ improve a lot in terms of accuracy. For the HMM, there is only a little improvement on its OOV accuracy because of the limit of generative models. 
+
+Since the running time of HMM is much shorter than the CRF+, I increased the training set(section 0 to section 9) of HMM and tested it on a brand new section(section 24). The CRF+ is still trained on section 2, 3 and 4. The result in table~\ref{table:wsj24} is very interesting: Even though the HMM is worse in the OOV accuracy because of its known limitation, its testing accuracy outperforms the CRF+! Even a less fancy model could yield great result in the present of big data.
+
+{\bf \emph{Different corpus.}} I am also very curious about the accuracy across different corpus so I extended previous experiment by the following: the HMM model was trained on section 0 to 9 and the CRF+ was trained on section 2 to 4, both from the WSJ corpus. Then I tested those two models on a brand new corpus: section ``ca" in the brown corpus. The results in table~\ref{table:brown} show (i) The testing accuracy for both HMM and CRF+ is still very good for different corpus; (ii) Their accuracy does not reduce too much, which means that it's plausible to train a specific model with big data and test it across multiple corpus.
+
+All the above results show that even though the CRF+ took significant amount of time, it's very useful for the sake of accuracy.
 \begin{table}
+\small
   \begin{tabular}{lSSSSSSSSSS}
     \toprule
     \multirow{3}{*}{Seed} &
       \multicolumn{3}{c}{Training Accuracy} &
       \multicolumn{3}{c}{Testing Accuracy} &
       \multicolumn{3}{c}{OOV Accuracy} &
-      \multicolumn{1}{c}{OOV Percentage} \\
+      \multicolumn{1}{c}{OOV\%} \\
       & {HMM} & {CRF} & {CRF+} &  {HMM} & {CRF} & {CRF+} &  {HMM} & {CRF} & {CRF+} &  {ALL} \\
       \midrule
     101 & 0.889 & 0.999 & 0.999 & 0.845 & 0.928 & 0.942 & 0.132 & 0.289 & 0.421 & 0.042  \\
@@ -68,7 +79,8 @@ Step 4: The probability for the entire sentence will be the sum of all its words
     108 & 0.892 & 0.999 & 0.999 & 0.870 & 0.935 & 0.945 & 0.167 & 0.233 & 0.333 & 0.036  \\
     109 & 0.886 & 0.999 & 0.999 & 0.855 & 0.924 & 0.935 & 0.226 & 0.258 & 0.387 & 0.037  \\
     110 & 0.880 & 0.999 & 0.999 & 0.886 & 0.947 & 0.959 & 0.423 & 0.462 & 0.692 & 0.030 \\
-    Avg & 2.1 & 2.1 & 2.1 & 2.1 & 2.1 & 2.1 & 2.1 & 2.1 & 2.1 & 2.1 \\
+    \hline
+    Avg & 0.888 & 0.999 & 0.999 & 0.856 & 0.924 & 0.937 & 0.198 & 0.242 & 0.404 & 0.035 \\
 
     \bottomrule
   \end{tabular}
@@ -84,55 +96,95 @@ Step 4: The probability for the entire sentence will be the sum of all its words
       \multicolumn{1}{c}{Training Accuracy} &
       \multicolumn{1}{c}{Testing Accuracy} &
       \multicolumn{1}{c}{OOV Accuracy} &
-      \multicolumn{1}{c}{OOV Percentage} &
             \multicolumn{1}{c}{Running Time} \\
 
       \midrule
-   atis & HMM & ? & ? & ? & ? & ? \\
-   atis & CRF & ? & ? & ? & ? & ? \\
-   atis & {CRF+} & ? & ? & ? & ? & ? \\
+   atis & HMM & 0.888 & 0.856 & 0.198  & 4.19 \\
+   atis & CRF & 0.999 & 0.924 & 0.242  & 64.00 \\
+   atis & {CRF+} & 0.999 &0.937 & 0.404  & 57.22 \\
     \hline
-   wsj & {HMM} & 0.861 & 0.785 & 0.380 & 0.153 & 52.78s \\
-   wsj & {CRF} & 0.993 & 0.803 & 0.473 & 0.153 & 4502.92 \\
-   wsj & {CRF+} & 0.992 & 0.862 & 0.701 & 0.153 & 4830.00 \\
+   wsj & {HMM} & 0.861 & 0.785 & 0.380 & 52.78 \\
+   wsj & {CRF} & 0.993 & 0.803 & 0.473  & 4502.92 \\
+   wsj & {CRF+} & 0.992 & 0.862 & 0.701  & 4830.00 \\
 
     \bottomrule
   \end{tabular}
-      \caption{\small atis,wsj.}\label{table:basic}
+      \caption{\small atis(0.035),wsj(0.153).}\label{table:basic}
+\end{table}
+
+\begin{table}
+  \begin{tabular}{lSSSSSS}
+    \toprule
+    	  \multicolumn{1}{c}{Model} &
+      \multicolumn{1}{c}{Training Accuracy} &
+      \multicolumn{1}{c}{Testing Accuracy} &
+      \multicolumn{1}{c}{OOV Accuracy} &
+            \multicolumn{1}{c}{Running Time} \\
+     \hline
+    {CRF} & 0.993 & 0.803 & 0.473 & 4502.92 \\
+    {CRF-cap-ing} & 0.992 & 0.830 & 0.581 & 4783.18 \\
+    {CRF-cap} & 0.988 & 0.835 & 0.611 & 5190.00 \\
+    {CRF+} & 0.992 & 0.862 & 0.701 & 4830.00 \\
+    \bottomrule
+  \end{tabular}
+  \caption{\small withoiut caps(0.153 oov).}\label{table:nocap}
 \end{table}
 
 
 \begin{table}
   \begin{tabular}{lSSSSSS}
     \toprule
-       \multirow{1}{*}{Corpus} &
     	  \multicolumn{1}{c}{Model} &
       \multicolumn{1}{c}{Training Accuracy} &
       \multicolumn{1}{c}{Testing Accuracy} &
       \multicolumn{1}{c}{OOV Accuracy} &
-      \multicolumn{1}{c}{OOV Percentage} &
             \multicolumn{1}{c}{Running Time} \\
-   wsj & {HMM} & 0.899 & 0.865 & 0.408 & 0.081 & 401.63s \\
-   wsj & {CRF+} & 0.992 & 0.912 & 0.747 & 0.081 & 46225.53 \\
+
+      \midrule
+    HMM-25 & 0.861 & 0.785 & 0.380 & 45.00  \\
+    HMM-75 & 0.861 & 0.785 & 0.380 & 49.00 \\
+   HMM-500 & 0.861 & 0.785 & 0.380 & 52.78 \\
+       \hline
+   {CRF-25} & 0.658 & 0.594 & 0.384 & 999.00 \\
+   {CRF-75} & 0.970 & 0.789 & 0.466 & 2726.00 \\
+   {CRF-500} & 0.993 & 0.803 & 0.473 & 4502.92 \\
 
     \bottomrule
   \end{tabular}
-    \caption{\small wsj234--567.}\label{table:wsj234}
-
+      \caption{\small wsj iterate(0.153).}\label{table:iterate}
 \end{table}
 
 \begin{table}
   \begin{tabular}{lSSSSSS}
     \toprule
-       \multirow{1}{*}{Corpus} &
     	  \multicolumn{1}{c}{Model} &
       \multicolumn{1}{c}{Training Accuracy} &
       \multicolumn{1}{c}{Testing Accuracy} &
       \multicolumn{1}{c}{OOV Accuracy} &
-      \multicolumn{1}{c}{OOV Percentage} &
             \multicolumn{1}{c}{Running Time} \\
-   wsj & {HMM} & 0.927 & 0.905 & 0.429 & 0.045 & 1095.60s \\
-   wsj & {CRF+} & 0.992 & 0.912 & 0.747 & 0.081 & 46225.53 \\
+            \hline
+    {HMM} & 0.899 & 0.865 & 0.408 & 401.63 \\
+    {CRF+} & 0.992 & 0.912 & 0.747 & 46225.53 \\
+
+    \bottomrule
+  \end{tabular}
+    \caption{\small wsj234--567(0.081).}\label{table:wsj234}
+
+\end{table}
+
+\begin{table}
+\small
+  \begin{tabular}{lSSSSSS}
+    \toprule
+    	  \multicolumn{1}{c}{Model} &
+      \multicolumn{1}{c}{Training Accuracy} &
+      \multicolumn{1}{c}{Testing Accuracy} &
+      \multicolumn{1}{c}{OOV Accuracy} &
+      \multicolumn{1}{c}{OOV\%} &
+            \multicolumn{1}{c}{Running Time} \\
+            \hline
+    {HMM} & 0.927 & 0.905 & 0.429 & 0.045 & 1095.60 \\
+    {CRF+} & 0.992 & 0.903 & 0.744 & 0.081 & 35705.22 \\
 
     \bottomrule
   \end{tabular}
@@ -140,47 +192,22 @@ Step 4: The probability for the entire sentence will be the sum of all its words
 \end{table}
 
 \begin{table}
+\small
   \begin{tabular}{lSSSSSS}
     \toprule
-       \multirow{1}{*}{Corpus} &
     	  \multicolumn{1}{c}{Model} &
       \multicolumn{1}{c}{Training Accuracy} &
       \multicolumn{1}{c}{Testing Accuracy} &
       \multicolumn{1}{c}{OOV Accuracy} &
-      \multicolumn{1}{c}{OOV Percentage} &
+      \multicolumn{1}{c}{OOV\%} &
             \multicolumn{1}{c}{Running Time} \\
-   wsj & {CRF} & 0.993 & 0.803 & 0.473 & 0.153 & 4502.92 \\
-   wsj & {CRF-cap} & 0.988 & 0.835 & 0.611 & 0.153 & 5190.00 \\
-   wsj & {CRF+} & 0.992 & 0.862 & 0.701 & 0.153 & 4830.00 \\
-    \bottomrule
-  \end{tabular}
-  \caption{\small withoiut caps.}\label{table:nocap}
-\end{table}
-
-
-\begin{table}
-  \begin{tabular}{lSSSSSS}
-    \toprule
-       \multirow{1}{*}{Corpus} &
-    	  \multicolumn{1}{c}{Model} &
-      \multicolumn{1}{c}{Training Accuracy} &
-      \multicolumn{1}{c}{Testing Accuracy} &
-      \multicolumn{1}{c}{OOV Accuracy} &
-      \multicolumn{1}{c}{OOV Percentage} &
-            \multicolumn{1}{c}{Running Time} \\
-
-      \midrule
-   wsj & HMM250 & 0.861 & 0.785 & 0.380 & ? & ? \\
-   wsj & HMM500 & ? & ? & ? & ? & ? \\
-   wsj & HMM750 & 0.861 & 0.785 & 0.380 & ? & ? \\
-    \hline
-   wsj & {CRF250} & 0.993 & 0.803 & 0.473 & 0.153 & 52.78s \\
-   wsj & {CRF500} & 0.993 & 0.803 & 0.473 & 0.153 & 4502.92 \\
-   wsj & {CRF750} & 0.992 & 0.862 & 0.701 & 0.153 & 4830.00 \\
+            \hline
+   {HMM} & 0.927 & 0.875 & 0.405 & 0.079 & 1380.72 \\
+    {CRF+} & 0.992 & 0.883 & 0.738 & 0.125 & 47572.09 \\
 
     \bottomrule
   \end{tabular}
-      \caption{\small atis,wsj.}\label{table:iterate}
+  \caption{\small HMM(0-9) CRF(234) test brown-ca.}\label{table:brown}
 \end{table}
 
 \section{Conclusion}
