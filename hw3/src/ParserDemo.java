@@ -1,20 +1,44 @@
 
-import java.util.Collection;
-import java.util.List;
+import java.io.FileFilter;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
 import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 
-import edu.stanford.nlp.process.Tokenizer;
-import edu.stanford.nlp.process.TokenizerFactory;
+import edu.stanford.nlp.ling.CoreLabel;
+import edu.stanford.nlp.ling.HasTag;
+import edu.stanford.nlp.ling.HasWord;
+import edu.stanford.nlp.ling.Sentence;
+import edu.stanford.nlp.parser.lexparser.EvaluateTreebank;
+import edu.stanford.nlp.parser.lexparser.LexicalizedParser;
+import edu.stanford.nlp.parser.lexparser.Options;
 import edu.stanford.nlp.process.CoreLabelTokenFactory;
 import edu.stanford.nlp.process.DocumentPreprocessor;
 import edu.stanford.nlp.process.PTBTokenizer;
-import edu.stanford.nlp.ling.CoreLabel;
-import edu.stanford.nlp.ling.HasWord;
-import edu.stanford.nlp.ling.Sentence;
-import edu.stanford.nlp.trees.*;
-import edu.stanford.nlp.parser.lexparser.LexicalizedParser;
+import edu.stanford.nlp.process.Tokenizer;
+import edu.stanford.nlp.process.TokenizerFactory;
+import edu.stanford.nlp.trees.GrammaticalStructure;
+import edu.stanford.nlp.trees.GrammaticalStructureFactory;
+import edu.stanford.nlp.trees.Tree;
+import edu.stanford.nlp.trees.TreePrint;
+import edu.stanford.nlp.trees.Treebank;
+import edu.stanford.nlp.trees.TreebankLanguagePack;
+import edu.stanford.nlp.trees.TypedDependency;
+import edu.stanford.nlp.util.Timing;
+import edu.utexas.nlp.util.CommandOption;
 
 class ParserDemo {
+	
+	private static CommandOption commandOption = new CommandOption();
+
+	private static LexicalizedParser parser;
 
   /**
    * The main method demonstrates the easiest way to load a parser.
@@ -28,20 +52,92 @@ class ParserDemo {
    * e.g.: java ParserDemo edu/stanford/nlp/models/lexparser/chineseFactored.ser.gz data/chinese-onesent-utf8.txt
    *
    */
-  public static void main(String[] args) {
-    String parserModel = "edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz";
-    if (args.length > 0) {
-      parserModel = args[0];
-    }
-    LexicalizedParser lp = LexicalizedParser.loadModel(parserModel);
+	public static void main(String[] args) {
 
-    if (args.length == 0) {
-      demoAPI(lp);
-    } else {
-      String textFile = (args.length > 1) ? args[1] : args[0];
-      demoDP(lp, textFile);
-    }
-  }
+		commandOption.processOptions(args);
+
+		Options op = new Options();
+		op.doDep = false;
+		op.doPCFG = true;
+		op.setOptions("-goodPCFG", "-evals", "tsv");
+		String initLoc = "/home/yufeng/courses/CS388/hw3/wsj/init.msg";
+
+		Treebank initBank = makeTreebank(
+				"/home/yufeng/courses/CS388/hw3/wsj/init/init.mrg", op, null);
+
+		Treebank trainBank = makeTreebank(
+				"/home/yufeng/courses/CS388/hw3/wsj/0103.mrg", op, null);
+
+		Treebank testBank = makeTreebank(
+				"/home/yufeng/courses/CS388/hw3/wsj/20.mrg", op, null);
+
+		int iteration = 20;
+		// try length of the tree.
+		LinkedList<Tree> goldTrees = new LinkedList<Tree>();
+		for (Tree goldTree : trainBank) {
+			List<? extends HasWord> sentence = getInputSentence(goldTree);
+			goldTrees.add(goldTree);
+		} // for tree iterator
+		
+		LinkedList<Tree> initTrees = new LinkedList<Tree>();
+		for (Tree initTree : initBank) {
+			List<? extends HasWord> sentence = getInputSentence(initTree);
+			initTrees.add(initTree);
+		} // for tree iterator
+		
+		parser = LexicalizedParser.trainFromTreebank(initBank, null, op);
+
+		while (iteration > 0) {
+			System.out.println(iteration);
+			iteration--;
+
+			List<Tree> ramdom = pickNRandom(goldTrees, 60);
+			// List<Tree> len = pickLength(goldTrees, 60);
+			List<Tree> prob = pickProb(goldTrees, 60);
+			int i = 1;
+			for(Tree t : prob) {
+				System.out.println(i + " : " + t.score());
+				i++;
+			}
+			assert false;
+//			int i = 1;
+			goldTrees.removeAll(ramdom);
+			StringBuffer sb = new StringBuffer();
+			initTrees.addAll(ramdom);
+			for (Tree init : initTrees) {
+				sb.append(init.pennString());
+			}
+			for (Tree ran : ramdom) {
+				sb.append(ran.pennString());
+			}
+			// dump to file.
+			try (PrintStream out = new PrintStream(
+					new FileOutputStream(initLoc))) {
+				out.print(sb.toString());
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			}
+			initBank = makeTreebank(initLoc, op, null);
+			LexicalizedParser lp = LexicalizedParser.trainFromTreebank(
+					initBank, null, op);
+			EvaluateTreebank evaluator = new EvaluateTreebank(lp);
+			evaluator.testOnTreebank(testBank);
+			assert false;
+		}
+
+
+
+	}
+	
+	public static List<? extends HasWord> getInputSentence(Tree t) {
+        ArrayList<? extends HasWord> s = t.taggedYield();
+        for (HasWord word : s) {
+          String tag = ((HasTag) word).tag();
+          tag = tag.split("-")[0];
+          ((HasTag) word).setTag(tag);
+        }
+        return Sentence.toCoreLabelList(s);
+	}
 
   /**
    * demoDP demonstrates turning a file into tokens and then parse
@@ -112,6 +208,76 @@ class ParserDemo {
     tp.printTree(parse);
   }
 
-  private ParserDemo() {} // static methods only
+	private static Treebank makeTreebank(String treebankPath, Options op,
+			FileFilter filt) {
+		System.err.println("Training a parser from treebank dir: "
+				+ treebankPath);
+		Treebank trainTreebank = op.tlpParams.diskTreebank();
+		System.err.print("Reading trees...");
+		if (filt == null) {
+			trainTreebank.loadPath(treebankPath);
+		} else {
+			trainTreebank.loadPath(treebankPath, filt);
+		}
+
+		Timing.tick("done [read " + trainTreebank.size() + " trees].");
+		return trainTreebank;
+	}
+	
+	public static List<Tree> pickNRandom(List<Tree> lst, int n) {
+	    List<Tree> copy = new LinkedList<Tree>(lst);
+	    Collections.shuffle(copy);
+	    return copy.subList(0, n);
+	}
+	
+	public static List<Tree> pickLength(List<Tree> lst, int n) {
+	    List<Tree> copy = new LinkedList<Tree>(lst);
+		Comparator<Tree> cmp = new Comparator<Tree>() {
+			@Override
+			public int compare(Tree o1, Tree o2) {
+				assert o1 != null;
+				assert o2 != null;
+				return o2.getLeaves().size() - o1.getLeaves().size();
+			}
+		};
+	    Collections.sort(copy, cmp);
+	    return copy.subList(0, n);
+	}
+	
+	/*Probability of the parse tree.*/
+	public static List<Tree> pickProb(List<Tree> lst, int n) {
+	    List<Tree> copy = new LinkedList<Tree>(lst);
+	    HashMap<Tree, Double> map = new HashMap<Tree, Double>();
+		Comparator<Tree> cmp = new Comparator<Tree>() {
+			@Override
+			public int compare(Tree o1, Tree o2) {
+				assert o1 != null;
+				assert o2 != null;
+				double s1, s2;
+				if (map.containsKey(o1)) {
+					s1 = map.get(o1);
+				} else {
+					Tree t1 = parser.apply(o1.yieldWords());
+					s1 = t1.score();
+					map.put(o1, s1);
+				}
+
+				if (map.containsKey(o2)) {
+					s2 = map.get(o2);
+				} else {
+					Tree t2 = parser.apply(o2.yieldWords());
+					s2 = t2.score();
+					map.put(o2, s2);
+				}
+				return (int) (s2 - s1);
+			}
+		};
+	    Collections.sort(copy, cmp);
+	    return copy.subList(0, n);
+	}
+	
+	public static List<Tree> pickEntropy(List<Tree> lst, int n) {
+		return null;
+	}
 
 }
