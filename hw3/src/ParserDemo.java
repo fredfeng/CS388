@@ -9,8 +9,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.ling.HasTag;
@@ -18,6 +21,7 @@ import edu.stanford.nlp.ling.HasWord;
 import edu.stanford.nlp.ling.Sentence;
 import edu.stanford.nlp.parser.lexparser.EvaluateTreebank;
 import edu.stanford.nlp.parser.lexparser.LexicalizedParser;
+import edu.stanford.nlp.parser.lexparser.LexicalizedParserQuery;
 import edu.stanford.nlp.parser.lexparser.Options;
 import edu.stanford.nlp.process.CoreLabelTokenFactory;
 import edu.stanford.nlp.process.DocumentPreprocessor;
@@ -31,6 +35,7 @@ import edu.stanford.nlp.trees.TreePrint;
 import edu.stanford.nlp.trees.Treebank;
 import edu.stanford.nlp.trees.TreebankLanguagePack;
 import edu.stanford.nlp.trees.TypedDependency;
+import edu.stanford.nlp.util.ScoredObject;
 import edu.stanford.nlp.util.Timing;
 import edu.utexas.nlp.util.CommandOption;
 
@@ -53,9 +58,7 @@ class ParserDemo {
    *
    */
 	public static void main(String[] args) {
-
 		commandOption.processOptions(args);
-
 		Options op = new Options();
 		op.doDep = false;
 		op.doPCFG = true;
@@ -78,13 +81,13 @@ class ParserDemo {
 			List<? extends HasWord> sentence = getInputSentence(goldTree);
 			goldTrees.add(goldTree);
 		} // for tree iterator
-		
+
 		LinkedList<Tree> initTrees = new LinkedList<Tree>();
 		for (Tree initTree : initBank) {
 			List<? extends HasWord> sentence = getInputSentence(initTree);
 			initTrees.add(initTree);
 		} // for tree iterator
-		
+
 		parser = LexicalizedParser.trainFromTreebank(initBank, null, op);
 
 		while (iteration > 0) {
@@ -93,14 +96,27 @@ class ParserDemo {
 
 			List<Tree> ramdom = pickNRandom(goldTrees, 60);
 			// List<Tree> len = pickLength(goldTrees, 60);
+			List<Tree> entropy = pickEntropy(goldTrees, 60);
+
 			List<Tree> prob = pickProb(goldTrees, 60);
-			int i = 1;
-			for(Tree t : prob) {
-				System.out.println(i + " : " + t.score());
-				i++;
-			}
-			assert false;
 //			int i = 1;
+//			for (Tree t : entropy) {
+//				LexicalizedParserQuery lpq = parser.lexicalizedParserQuery();
+//				double entro1;
+//				lpq.parse(t.yieldWords());
+//				List<ScoredObject<Tree>> trees1 = lpq.getKBestPCFGParses(10);
+//				double sum = 0.0;
+//				for (ScoredObject<Tree> so : trees1) {
+//					sum += Math.exp(so.score());
+//				}
+//				Set<Double> set = new HashSet<Double>();
+//				for (ScoredObject<Tree> so : trees1) {
+//					double val = Math.exp(so.score()) / sum;
+//					set.add(val);
+//				}
+//				entro1 = entropy(set, t.getLeaves().size());
+//				i++;
+//			}
 			goldTrees.removeAll(ramdom);
 			StringBuffer sb = new StringBuffer();
 			initTrees.addAll(ramdom);
@@ -122,10 +138,7 @@ class ParserDemo {
 					initBank, null, op);
 			EvaluateTreebank evaluator = new EvaluateTreebank(lp);
 			evaluator.testOnTreebank(testBank);
-			assert false;
 		}
-
-
 
 	}
 	
@@ -269,7 +282,23 @@ class ParserDemo {
 					s2 = t2.score();
 					map.put(o2, s2);
 				}
-				return (int) (s2 - s1);
+				double exp1 = Math.exp(s1);
+				double exp2 = Math.exp(s2);
+				int len1 = o1.getLeaves().size() - 1;
+				int len2 = o2.getLeaves().size() - 1;
+				double norm1, norm2;
+				if (len1 == 0) {
+					norm1 = exp1;
+				} else {
+					norm1 = Math.pow(exp1, (1.0 / len1));
+				}
+				if (len2 == 0) {
+					norm2 = exp2;
+				} else {
+					norm2 = Math.pow(exp2, (1.0 / len2));
+				}
+				int diff = (norm1 - norm2) > 0 ? 1 : -1;
+				return diff;
 			}
 		};
 	    Collections.sort(copy, cmp);
@@ -277,7 +306,71 @@ class ParserDemo {
 	}
 	
 	public static List<Tree> pickEntropy(List<Tree> lst, int n) {
-		return null;
+		List<Tree> copy = new LinkedList<Tree>(lst);
+		Map<Tree, Double> cache = new HashMap<Tree, Double>();
+		Comparator<Tree> cmp = new Comparator<Tree>() {
+			@Override
+			public int compare(Tree o1, Tree o2) {
+				assert o1 != null;
+				assert o2 != null;
+				LexicalizedParserQuery lpq = parser.lexicalizedParserQuery();
+				double entro1, entro2;
+				if (cache.containsKey(o1)) {
+					entro1 = cache.get(o1);
+				} else {
+					lpq.parse(o1.yieldWords());
+					List<ScoredObject<Tree>> trees1 = lpq
+							.getKBestPCFGParses(10);
+					double sum = 0.0;
+					for (ScoredObject<Tree> so : trees1) {
+						sum += Math.exp(so.score());
+					}
+					Set<Double> set = new HashSet<Double>();
+					for (ScoredObject<Tree> so : trees1) {
+						double val = Math.exp(so.score()) / sum;
+						set.add(val);
+					}
+					entro1 = entropy(set, o1.getLeaves().size());
+					cache.put(o1, entro1);
+				}
+				if (cache.containsKey(o2)) {
+					entro2 = cache.get(o2);
+				} else {
+					lpq.parse(o2.yieldWords());
+					List<ScoredObject<Tree>> trees2 = lpq
+							.getKBestPCFGParses(10);
+					double sum = 0.0;
+					for (ScoredObject<Tree> so : trees2) {
+						sum += Math.exp(so.score());
+					}
+					Set<Double> set = new HashSet<Double>();
+					for (ScoredObject<Tree> so : trees2) {
+						double val = Math.exp(so.score()) / sum;
+						set.add(val);
+					}
+					entro2 = entropy(set, o2.getLeaves().size());
+					cache.put(o2, entro2);
+				}
+				int diff = (entro2 - entro1) > 0 ? 1 : -1;
+				return diff;
+			}
+		};
+		Collections.sort(copy, cmp);
+		return copy.subList(0, n);
+	}
+	
+	public static double logBase2(double x) {
+		return Math.log(x)/Math.log(2);
+	}
+	
+	public static double entropy(Set<Double> set, int len) {
+		double sum = 0.0;
+		for (double dd : set) {
+			double log2 = logBase2(dd);
+			double val = log2 * dd * (-1);
+			sum += val;
+		}
+		return (sum / len);
 	}
 
 }
