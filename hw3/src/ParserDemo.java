@@ -44,6 +44,10 @@ class ParserDemo {
 	private static CommandOption commandOption = new CommandOption();
 
 	private static LexicalizedParser parser;
+	
+	public static enum Selection {
+		RAN, LEN, PROB, TREE
+	}
 
   /**
    * The main method demonstrates the easiest way to load a parser.
@@ -62,82 +66,91 @@ class ParserDemo {
 		Options op = new Options();
 		op.doDep = false;
 		op.doPCFG = true;
+		Selection sel = Selection.PROB;
 		op.setOptions("-goodPCFG", "-evals", "tsv");
-		String initLoc = "/home/yufeng/courses/CS388/hw3/wsj/init.msg";
+		String initLoc = "/home/yufeng/courses/CS388/hw3/wsj/init/init.mrg";
+		String buffLoc = "/home/yufeng/courses/CS388/hw3/wsj/init.msg";
+		String trainLoc = "/home/yufeng/courses/CS388/hw3/wsj/0103.mrg";
+		String testLoc = "/home/yufeng/courses/CS388/hw3/wsj/20.mrg";
+		if (args.length > 0) {
+			// from command line.
+			String s = args[0];
+			sel = Selection.valueOf(s);
+		} else {
 
-		Treebank initBank = makeTreebank(
-				"/home/yufeng/courses/CS388/hw3/wsj/init/init.mrg", op, null);
+		}
 
-		Treebank trainBank = makeTreebank(
-				"/home/yufeng/courses/CS388/hw3/wsj/0103.mrg", op, null);
-
-		Treebank testBank = makeTreebank(
-				"/home/yufeng/courses/CS388/hw3/wsj/20.mrg", op, null);
+		System.out.println("Selection function: ===============" + sel);
+		Treebank initBank = makeTreebank(initLoc, op, null);
+		Treebank trainBank = makeTreebank(trainLoc, op, null);
+		Treebank testBank = makeTreebank(testLoc, op, null);
 
 		int iteration = 20;
 		// try length of the tree.
 		LinkedList<Tree> goldTrees = new LinkedList<Tree>();
 		for (Tree goldTree : trainBank) {
-			List<? extends HasWord> sentence = getInputSentence(goldTree);
 			goldTrees.add(goldTree);
 		} // for tree iterator
 
 		LinkedList<Tree> initTrees = new LinkedList<Tree>();
 		for (Tree initTree : initBank) {
-			List<? extends HasWord> sentence = getInputSentence(initTree);
 			initTrees.add(initTree);
 		} // for tree iterator
 
 		parser = LexicalizedParser.trainFromTreebank(initBank, null, op);
-
 		while (iteration > 0) {
-			System.out.println(iteration);
-			iteration--;
-
-			List<Tree> ramdom = pickNRandom(goldTrees, 60);
-			// List<Tree> len = pickLength(goldTrees, 60);
-			List<Tree> entropy = pickEntropy(goldTrees, 60);
-
-			List<Tree> prob = pickProb(goldTrees, 60);
-//			int i = 1;
-//			for (Tree t : entropy) {
-//				LexicalizedParserQuery lpq = parser.lexicalizedParserQuery();
-//				double entro1;
-//				lpq.parse(t.yieldWords());
-//				List<ScoredObject<Tree>> trees1 = lpq.getKBestPCFGParses(10);
-//				double sum = 0.0;
-//				for (ScoredObject<Tree> so : trees1) {
-//					sum += Math.exp(so.score());
-//				}
-//				Set<Double> set = new HashSet<Double>();
-//				for (ScoredObject<Tree> so : trees1) {
-//					double val = Math.exp(so.score()) / sum;
-//					set.add(val);
-//				}
-//				entro1 = entropy(set, t.getLeaves().size());
-//				i++;
-//			}
-			goldTrees.removeAll(ramdom);
+		    List<Tree> selList;
+		    if(sel == Selection.RAN) {
+		    	selList = pickNRandom(goldTrees, 60);
+		    } else if(sel == Selection.LEN) {
+		    	selList = pickLength(goldTrees, 60);
+		    } else if(sel == Selection.PROB) {
+		    	selList = pickProb(goldTrees, 60);
+		    } else {
+		    	assert sel == Selection.TREE;
+		    	selList = pickEntropy(goldTrees, 60);
+		    }
+			// int i = 1;
+			// for (Tree t : entropy) {
+			// LexicalizedParserQuery lpq = parser.lexicalizedParserQuery();
+			// double entro1;
+			// lpq.parse(t.yieldWords());
+			// List<ScoredObject<Tree>> trees1 = lpq.getKBestPCFGParses(10);
+			// double sum = 0.0;
+			// for (ScoredObject<Tree> so : trees1) {
+			// sum += Math.exp(so.score());
+			// }
+			// Set<Double> set = new HashSet<Double>();
+			// for (ScoredObject<Tree> so : trees1) {
+			// double val = Math.exp(so.score()) / sum;
+			// set.add(val);
+			// }
+			// entro1 = entropy(set, t.getLeaves().size());
+			// i++;
+			// }
+			goldTrees.removeAll(selList);
 			StringBuffer sb = new StringBuffer();
-			initTrees.addAll(ramdom);
+			initTrees.addAll(selList);
 			for (Tree init : initTrees) {
 				sb.append(init.pennString());
 			}
-			for (Tree ran : ramdom) {
+			for (Tree ran : selList) {
 				sb.append(ran.pennString());
 			}
 			// dump to file.
 			try (PrintStream out = new PrintStream(
-					new FileOutputStream(initLoc))) {
+					new FileOutputStream(buffLoc))) {
 				out.print(sb.toString());
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			}
-			initBank = makeTreebank(initLoc, op, null);
-			LexicalizedParser lp = LexicalizedParser.trainFromTreebank(
-					initBank, null, op);
-			EvaluateTreebank evaluator = new EvaluateTreebank(lp);
+			Treebank buffBank = makeTreebank(buffLoc, op, null);
+			parser = LexicalizedParser.trainFromTreebank(buffBank, null, op);
+			EvaluateTreebank evaluator = new EvaluateTreebank(parser);
+			System.out.println("Begin iteration:-----------" + iteration);
 			evaluator.testOnTreebank(testBank);
+			System.out.println("End iteration:-----------" + iteration);
+			iteration--;
 		}
 
 	}
