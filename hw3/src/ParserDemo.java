@@ -66,7 +66,8 @@ class ParserDemo {
 		Options op = new Options();
 		op.doDep = false;
 		op.doPCFG = true;
-		Selection sel = Selection.PROB;
+		int wordsPerIter = 1500;
+		Selection sel = Selection.LEN;
 		op.setOptions("-goodPCFG", "-evals", "tsv");
 		String initLoc = "/home/yufeng/courses/CS388/hw3/wsj/init/init.mrg";
 		String buffLoc = "/home/yufeng/courses/CS388/hw3/wsj/init.msg";
@@ -99,35 +100,17 @@ class ParserDemo {
 
 		parser = LexicalizedParser.trainFromTreebank(initBank, null, op);
 		while (iteration > 0) {
-		    List<Tree> selList;
-		    if(sel == Selection.RAN) {
-		    	selList = pickNRandom(goldTrees, 60);
-		    } else if(sel == Selection.LEN) {
-		    	selList = pickLength(goldTrees, 60);
-		    } else if(sel == Selection.PROB) {
-		    	selList = pickProb(goldTrees, 60);
-		    } else {
-		    	assert sel == Selection.TREE;
-		    	selList = pickEntropy(goldTrees, 60);
-		    }
-			// int i = 1;
-			// for (Tree t : entropy) {
-			// LexicalizedParserQuery lpq = parser.lexicalizedParserQuery();
-			// double entro1;
-			// lpq.parse(t.yieldWords());
-			// List<ScoredObject<Tree>> trees1 = lpq.getKBestPCFGParses(10);
-			// double sum = 0.0;
-			// for (ScoredObject<Tree> so : trees1) {
-			// sum += Math.exp(so.score());
-			// }
-			// Set<Double> set = new HashSet<Double>();
-			// for (ScoredObject<Tree> so : trees1) {
-			// double val = Math.exp(so.score()) / sum;
-			// set.add(val);
-			// }
-			// entro1 = entropy(set, t.getLeaves().size());
-			// i++;
-			// }
+			List<Tree> selList;
+			if (sel == Selection.RAN) {
+				selList = pickNRandom(goldTrees, wordsPerIter);
+			} else if (sel == Selection.LEN) {
+				selList = pickLength(goldTrees, wordsPerIter);
+			} else if (sel == Selection.PROB) {
+				selList = pickProb(goldTrees, wordsPerIter);
+			} else {
+				assert sel == Selection.TREE;
+				selList = pickEntropy(goldTrees, wordsPerIter);
+			}
 			goldTrees.removeAll(selList);
 			StringBuffer sb = new StringBuffer();
 			initTrees.addAll(selList);
@@ -145,6 +128,9 @@ class ParserDemo {
 				e.printStackTrace();
 			}
 			Treebank buffBank = makeTreebank(buffLoc, op, null);
+			System.out.println("Current train bank:" + buffBank.size());
+			System.out.println("Remain train bank:" + goldTrees.size());
+
 			parser = LexicalizedParser.trainFromTreebank(buffBank, null, op);
 			EvaluateTreebank evaluator = new EvaluateTreebank(parser);
 			System.out.println("Begin iteration:-----------" + iteration);
@@ -253,7 +239,20 @@ class ParserDemo {
 	public static List<Tree> pickNRandom(List<Tree> lst, int n) {
 	    List<Tree> copy = new LinkedList<Tree>(lst);
 	    Collections.shuffle(copy);
-	    return copy.subList(0, n);
+	    return topN(copy, n);
+	}
+	
+	public static List<Tree> topN(List<Tree> lst, int n) {
+		int cnt = 0;
+		int sum = 0;
+		for (Tree t : lst) {
+			sum += t.yieldHasWord().size();
+			if (sum > n)
+				break;
+
+			cnt++;
+		}
+		return lst.subList(0, cnt);
 	}
 	
 	public static List<Tree> pickLength(List<Tree> lst, int n) {
@@ -263,113 +262,95 @@ class ParserDemo {
 			public int compare(Tree o1, Tree o2) {
 				assert o1 != null;
 				assert o2 != null;
+				assert o1.getLeaves().size() == o1.yieldHasWord().size();
+				assert o2.getLeaves().size() == o2.yieldHasWord().size();
+
 				return o2.getLeaves().size() - o1.getLeaves().size();
 			}
 		};
 	    Collections.sort(copy, cmp);
-	    return copy.subList(0, n);
+	    return topN(copy, n);
 	}
 	
 	/*Probability of the parse tree.*/
 	public static List<Tree> pickProb(List<Tree> lst, int n) {
 	    List<Tree> copy = new LinkedList<Tree>(lst);
-	    HashMap<Tree, Double> map = new HashMap<Tree, Double>();
+	    HashMap<Tree, Double> cache = new HashMap<Tree, Double>();
+		for (Tree t : lst) {
+			double s1, norm;
+			Tree t1 = parser.apply(t.yieldWords());
+			s1 = t1.score();
+			double exp = Math.exp(s1);
+			int len = t.getLeaves().size() - 1;
+			if (len == 0) {
+				norm = exp;
+			} else {
+				norm = Math.pow(exp, (1.0 / len));
+			}
+			assert !Double.isNaN(norm);
+			cache.put(t, norm);
+		}
 		Comparator<Tree> cmp = new Comparator<Tree>() {
 			@Override
 			public int compare(Tree o1, Tree o2) {
 				assert o1 != null;
 				assert o2 != null;
-				double s1, s2;
-				if (map.containsKey(o1)) {
-					s1 = map.get(o1);
-				} else {
-					Tree t1 = parser.apply(o1.yieldWords());
-					s1 = t1.score();
-					map.put(o1, s1);
-				}
+				assert cache.containsKey(o1);
+				assert cache.containsKey(o2);
 
-				if (map.containsKey(o2)) {
-					s2 = map.get(o2);
-				} else {
-					Tree t2 = parser.apply(o2.yieldWords());
-					s2 = t2.score();
-					map.put(o2, s2);
-				}
-				double exp1 = Math.exp(s1);
-				double exp2 = Math.exp(s2);
-				int len1 = o1.getLeaves().size() - 1;
-				int len2 = o2.getLeaves().size() - 1;
-				double norm1, norm2;
-				if (len1 == 0) {
-					norm1 = exp1;
-				} else {
-					norm1 = Math.pow(exp1, (1.0 / len1));
-				}
-				if (len2 == 0) {
-					norm2 = exp2;
-				} else {
-					norm2 = Math.pow(exp2, (1.0 / len2));
-				}
+				double norm1 = cache.get(o1);
+				double norm2 = cache.get(o2);
+
 				int diff = (norm1 - norm2) > 0 ? 1 : -1;
+				if (norm1 == norm2)
+					diff = 0;
 				return diff;
 			}
 		};
 	    Collections.sort(copy, cmp);
-	    return copy.subList(0, n);
+	    return topN(copy, n);
 	}
 	
 	public static List<Tree> pickEntropy(List<Tree> lst, int n) {
 		List<Tree> copy = new LinkedList<Tree>(lst);
 		Map<Tree, Double> cache = new HashMap<Tree, Double>();
+		LexicalizedParserQuery lpq = parser.lexicalizedParserQuery();
+		for(Tree t : lst) {
+			double entrophy;
+			lpq.parse(t.yieldWords());
+			List<ScoredObject<Tree>> trees1 = lpq
+					.getKBestPCFGParses(10);
+			double sum = 0.0;
+			for (ScoredObject<Tree> so : trees1) {
+				sum += Math.exp(so.score());
+			}
+			Set<Double> set = new HashSet<Double>();
+			for (ScoredObject<Tree> so : trees1) {
+				double val = Math.exp(so.score()) / sum;
+				set.add(val);
+			}
+			entrophy = entropy(set, t.getLeaves().size());
+			cache.put(t, entrophy);
+		}
 		Comparator<Tree> cmp = new Comparator<Tree>() {
 			@Override
 			public int compare(Tree o1, Tree o2) {
 				assert o1 != null;
 				assert o2 != null;
-				LexicalizedParserQuery lpq = parser.lexicalizedParserQuery();
-				double entro1, entro2;
-				if (cache.containsKey(o1)) {
-					entro1 = cache.get(o1);
-				} else {
-					lpq.parse(o1.yieldWords());
-					List<ScoredObject<Tree>> trees1 = lpq
-							.getKBestPCFGParses(10);
-					double sum = 0.0;
-					for (ScoredObject<Tree> so : trees1) {
-						sum += Math.exp(so.score());
-					}
-					Set<Double> set = new HashSet<Double>();
-					for (ScoredObject<Tree> so : trees1) {
-						double val = Math.exp(so.score()) / sum;
-						set.add(val);
-					}
-					entro1 = entropy(set, o1.getLeaves().size());
-					cache.put(o1, entro1);
-				}
-				if (cache.containsKey(o2)) {
-					entro2 = cache.get(o2);
-				} else {
-					lpq.parse(o2.yieldWords());
-					List<ScoredObject<Tree>> trees2 = lpq
-							.getKBestPCFGParses(10);
-					double sum = 0.0;
-					for (ScoredObject<Tree> so : trees2) {
-						sum += Math.exp(so.score());
-					}
-					Set<Double> set = new HashSet<Double>();
-					for (ScoredObject<Tree> so : trees2) {
-						double val = Math.exp(so.score()) / sum;
-						set.add(val);
-					}
-					entro2 = entropy(set, o2.getLeaves().size());
-					cache.put(o2, entro2);
-				}
+				assert cache.containsKey(o1);
+				assert cache.containsKey(o2);
+				double entro1 = cache.get(o1);
+				double entro2 = cache.get(o2);
+				assert !Double.isNaN(entro1);
+				assert !Double.isNaN(entro2);
 				int diff = (entro2 - entro1) > 0 ? 1 : -1;
+				if (entro2 == entro1)
+					diff = 0;
 				return diff;
 			}
 		};
 		Collections.sort(copy, cmp);
-		return copy.subList(0, n);
+	    return topN(copy, n);
 	}
 	
 	public static double logBase2(double x) {
