@@ -1,3 +1,4 @@
+package edu.utexas.nlp;
 
 import java.io.FileFilter;
 import java.io.FileNotFoundException;
@@ -42,12 +43,9 @@ import edu.stanford.nlp.trees.TreebankLanguagePack;
 import edu.stanford.nlp.trees.TypedDependency;
 import edu.stanford.nlp.util.ScoredObject;
 import edu.stanford.nlp.util.Timing;
-import edu.utexas.nlp.util.CommandOption;
 
-class ParserDemo {
+class ActiveLearner {
 	
-	private static CommandOption commandOption = new CommandOption();
-
 	private static LexicalizedParser parser;
 	
 	private static int K = 10;
@@ -74,8 +72,6 @@ class ParserDemo {
    *
    */
 	public static void main(String[] args) throws ParseException {
-		commandOption.processOptions(args);
-
 		CommandLineParser cmdParser = new GnuParser();
 		// create Options object
 		org.apache.commons.cli.Options opts = new org.apache.commons.cli.Options();
