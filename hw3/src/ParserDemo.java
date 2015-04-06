@@ -15,6 +15,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.ParseException;
+
 import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.ling.HasTag;
 import edu.stanford.nlp.ling.HasWord;
@@ -45,6 +50,12 @@ class ParserDemo {
 
 	private static LexicalizedParser parser;
 	
+	private static int K = 10;
+	
+	private static int wordsPerIter = 1500;
+	
+	private static int iteration = 20;
+	
 	public static enum Selection {
 		RAN, LEN, PROB, TREE
 	}
@@ -59,34 +70,70 @@ class ParserDemo {
    *
    * Usage: {@code java ParserDemo [[model] textFile]}
    * e.g.: java ParserDemo edu/stanford/nlp/models/lexparser/chineseFactored.ser.gz data/chinese-onesent-utf8.txt
+ * @throws ParseException 
    *
    */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws ParseException {
 		commandOption.processOptions(args);
+
+		CommandLineParser cmdParser = new GnuParser();
+		// create Options object
+		org.apache.commons.cli.Options opts = new org.apache.commons.cli.Options();
+		opts.addOption("trainBank", true, "train bank");
+		opts.addOption("initBank", true, "init bank");
+		opts.addOption("candidateBank", true, "candidate bank");
+		opts.addOption("testBank", true, "candidate bank");
+		opts.addOption("nextTrainBank", true, "nextTrain bank");
+		opts.addOption("nextCandidatePool", true, "next candidate bank");
+		opts.addOption("selectionFunction", true, "selection function");
+		opts.addOption("K", true, "Top k parsers");
+		opts.addOption("iteration", true, "Number of iterations");
+		opts.addOption("wordsPerIter", true, "Words per iteration");
+		CommandLine cmd = cmdParser.parse(opts, args);
+
 		Options op = new Options();
 		op.doDep = false;
 		op.doPCFG = true;
-		int wordsPerIter = 1500;
-		Selection sel = Selection.LEN;
+		Selection sel = Selection.TREE;
 		op.setOptions("-goodPCFG", "-evals", "tsv");
+
 		String initLoc = "/home/yufeng/courses/CS388/hw3/wsj/init/init.mrg";
 		String buffLoc = "/home/yufeng/courses/CS388/hw3/wsj/init.msg";
 		String trainLoc = "/home/yufeng/courses/CS388/hw3/wsj/0103.mrg";
 		String testLoc = "/home/yufeng/courses/CS388/hw3/wsj/20.mrg";
-		if (args.length > 0) {
-			// from command line.
-			String s = args[0];
-			sel = Selection.valueOf(s);
-		} else {
+		
+		if (cmd.hasOption("initBank"))
+			initLoc = cmd.getOptionValue("initBank");
+		if (cmd.hasOption("trainBank"))
+			trainLoc = cmd.getOptionValue("trainBank");
+		if (cmd.hasOption("testBank"))
+			testLoc = cmd.getOptionValue("testBank");
+		if (cmd.hasOption("candidateBank"))
+			buffLoc = cmd.getOptionValue("candidateBank");
+		
+		if (cmd.hasOption("selectionFunction"))
+			sel = Selection.valueOf(cmd.getOptionValue("selectionFunction"));
+		if (cmd.hasOption("iteration"))
+			iteration = Integer.parseInt(cmd.getOptionValue("iteration"));
+		if (cmd.hasOption("wordsPerIter"))
+			wordsPerIter = Integer.parseInt(cmd.getOptionValue("wordsPerIter"));
+		if (cmd.hasOption("K"))
+			K = Integer.parseInt(cmd.getOptionValue("K"));
+		System.out.println("init bank: ------------" + initLoc);
+		System.out.println("buff bank: ------------" + buffLoc);
+		System.out.println("train bank: ------------" + trainLoc);
+		System.out.println("test bank: ------------" + testLoc);
+		System.out.println("selectionFunction: ----------------------" + sel);
+		System.out.println("iteration: ------------------------------"
+				+ iteration);
+		System.out.println("wordsPerIter: ---------------------------"
+				+ wordsPerIter);
+		System.out.println("K value: --------------------------------" + K);
 
-		}
-
-		System.out.println("Selection function: ===============" + sel);
 		Treebank initBank = makeTreebank(initLoc, op, null);
 		Treebank trainBank = makeTreebank(trainLoc, op, null);
 		Treebank testBank = makeTreebank(testLoc, op, null);
 
-		int iteration = 20;
 		// try length of the tree.
 		LinkedList<Tree> goldTrees = new LinkedList<Tree>();
 		for (Tree goldTree : trainBank) {
@@ -98,28 +145,31 @@ class ParserDemo {
 			initTrees.add(initTree);
 		} // for tree iterator
 
-		parser = LexicalizedParser.trainFromTreebank(initBank, null, op);
+		parser = LexicalizedParser.trainFromTreebank(initBank, op);
+
+		if (sel == Selection.RAN) {
+			sortRandom(goldTrees);
+		} else if (sel == Selection.LEN) {
+			sortLength(goldTrees);
+		} else if (sel == Selection.PROB) {
+			sortProb(goldTrees);
+		} else {
+			assert sel == Selection.TREE;
+			sortEntropy(goldTrees);
+		}
+
 		while (iteration > 0) {
-			List<Tree> selList;
-			if (sel == Selection.RAN) {
-				selList = pickNRandom(goldTrees, wordsPerIter);
-			} else if (sel == Selection.LEN) {
-				selList = pickLength(goldTrees, wordsPerIter);
-			} else if (sel == Selection.PROB) {
-				selList = pickProb(goldTrees, wordsPerIter);
-			} else {
-				assert sel == Selection.TREE;
-				selList = pickEntropy(goldTrees, wordsPerIter);
-			}
-			goldTrees.removeAll(selList);
+			List<Tree> selList = topN(goldTrees, wordsPerIter);
+			List<Tree> copy = new LinkedList<Tree>(selList);
+			goldTrees.removeAll(copy);
 			StringBuffer sb = new StringBuffer();
-			initTrees.addAll(selList);
+			initTrees.addAll(copy);
 			for (Tree init : initTrees) {
 				sb.append(init.pennString());
 			}
-			for (Tree ran : selList) {
-				sb.append(ran.pennString());
-			}
+			// for (Tree ran : copy) {
+			// sb.append(ran.pennString());
+			// }
 			// dump to file.
 			try (PrintStream out = new PrintStream(
 					new FileOutputStream(buffLoc))) {
@@ -131,7 +181,7 @@ class ParserDemo {
 			System.out.println("Current train bank:" + buffBank.size());
 			System.out.println("Remain train bank:" + goldTrees.size());
 
-			parser = LexicalizedParser.trainFromTreebank(buffBank, null, op);
+			parser = LexicalizedParser.trainFromTreebank(buffBank, op);
 			EvaluateTreebank evaluator = new EvaluateTreebank(parser);
 			System.out.println("Begin iteration:-----------" + iteration);
 			evaluator.testOnTreebank(testBank);
@@ -236,17 +286,15 @@ class ParserDemo {
 		return trainTreebank;
 	}
 	
-	public static List<Tree> pickNRandom(List<Tree> lst, int n) {
-	    List<Tree> copy = new LinkedList<Tree>(lst);
-	    Collections.shuffle(copy);
-	    return topN(copy, n);
+	public static void sortRandom(List<Tree> lst) {
+	    Collections.shuffle(lst);
 	}
 	
 	public static List<Tree> topN(List<Tree> lst, int n) {
 		int cnt = 0;
 		int sum = 0;
 		for (Tree t : lst) {
-			sum += t.yieldHasWord().size();
+			sum += t.yield().size();
 			if (sum > n)
 				break;
 
@@ -255,33 +303,27 @@ class ParserDemo {
 		return lst.subList(0, cnt);
 	}
 	
-	public static List<Tree> pickLength(List<Tree> lst, int n) {
-	    List<Tree> copy = new LinkedList<Tree>(lst);
+	public static void sortLength(List<Tree> lst) {
 		Comparator<Tree> cmp = new Comparator<Tree>() {
 			@Override
 			public int compare(Tree o1, Tree o2) {
 				assert o1 != null;
 				assert o2 != null;
-				assert o1.getLeaves().size() == o1.yieldHasWord().size();
-				assert o2.getLeaves().size() == o2.yieldHasWord().size();
-
 				return o2.getLeaves().size() - o1.getLeaves().size();
 			}
 		};
-	    Collections.sort(copy, cmp);
-	    return topN(copy, n);
+	    Collections.sort(lst, cmp);
 	}
 	
 	/*Probability of the parse tree.*/
-	public static List<Tree> pickProb(List<Tree> lst, int n) {
-	    List<Tree> copy = new LinkedList<Tree>(lst);
-	    HashMap<Tree, Double> cache = new HashMap<Tree, Double>();
+	public static void sortProb(List<Tree> lst) {
+		HashMap<Tree, Double> cache = new HashMap<Tree, Double>();
 		for (Tree t : lst) {
 			double s1, norm;
 			Tree t1 = parser.apply(t.yieldWords());
 			s1 = t1.score();
 			double exp = Math.exp(s1);
-			int len = t.getLeaves().size() - 1;
+			int len = t.yield().size() - 1;
 			if (len == 0) {
 				norm = exp;
 			} else {
@@ -297,29 +339,26 @@ class ParserDemo {
 				assert o2 != null;
 				assert cache.containsKey(o1);
 				assert cache.containsKey(o2);
-
 				double norm1 = cache.get(o1);
 				double norm2 = cache.get(o2);
-
 				int diff = (norm1 - norm2) > 0 ? 1 : -1;
 				if (norm1 == norm2)
 					diff = 0;
 				return diff;
 			}
 		};
-	    Collections.sort(copy, cmp);
-	    return topN(copy, n);
+		Collections.sort(lst, cmp);
 	}
 	
-	public static List<Tree> pickEntropy(List<Tree> lst, int n) {
-		List<Tree> copy = new LinkedList<Tree>(lst);
+	public static void sortEntropy(List<Tree> lst) {
 		Map<Tree, Double> cache = new HashMap<Tree, Double>();
 		LexicalizedParserQuery lpq = parser.lexicalizedParserQuery();
-		for(Tree t : lst) {
+
+		for (Tree t : lst) {
 			double entrophy;
 			lpq.parse(t.yieldWords());
-			List<ScoredObject<Tree>> trees1 = lpq
-					.getKBestPCFGParses(10);
+
+			List<ScoredObject<Tree>> trees1 = lpq.getKBestPCFGParses(K);
 			double sum = 0.0;
 			for (ScoredObject<Tree> so : trees1) {
 				sum += Math.exp(so.score());
@@ -341,16 +380,15 @@ class ParserDemo {
 				assert cache.containsKey(o2);
 				double entro1 = cache.get(o1);
 				double entro2 = cache.get(o2);
-				assert !Double.isNaN(entro1);
-				assert !Double.isNaN(entro2);
+				assert !Double.isNaN(entro1) : o1.yieldWords();
+				assert !Double.isNaN(entro2) : o2.yieldWords();
 				int diff = (entro2 - entro1) > 0 ? 1 : -1;
 				if (entro2 == entro1)
 					diff = 0;
 				return diff;
 			}
 		};
-		Collections.sort(copy, cmp);
-	    return topN(copy, n);
+		Collections.sort(lst, cmp);
 	}
 	
 	public static double logBase2(double x) {
