@@ -306,7 +306,8 @@ class ActiveLearner {
 				double entro2 = cache.get(o2);
 				assert !Double.isNaN(entro1) : o1.yieldWords();
 				assert !Double.isNaN(entro2) : o2.yieldWords();
-				int diff = (entro2 - entro1) > 0 ? 1 : -1;
+				//int diff = (entro2 - entro1) > 0 ? 1 : -1;
+				int diff = (entro1 - entro2) > 0 ? 1 : -1;
 				if (entro2 == entro1)
 					diff = 0;
 				return diff;
