@@ -1,0 +1,44 @@
+HW3-------Statistical parsing
+
+0. Make sure you have JDK1.8
+    export JAVA_HOME=/home/yufeng/lib/jdk1.8
+    export PATH=$JAVA_HOME/bin:$PATH
+
+1. Compile.
+   Assume you have lib/mallet-deps.jar in current folder;
+   Run ./compile.sh;
+   ./bin/ contains all the .class files.
+
+2. Parser.
+
+    //Using the entire 00 section as the initial set.
+    cat wsj/00/*.mrg > wsj/init.mrg 
+
+    //Using 01 to 03 sections as the training set.
+    cat wsj/0[123]/*.mrg > wsj/0103.mrg 
+
+    //Using 20 section as the testing set.
+    cat wsj/20/*.mrg > wsj/20.mrg
+
+3. Command line options.
+
+        -trainBank: file for training
+        -initBank: file for initial set
+        -candidateBank: temporary file for I/O during selection/ordering
+        -testBank: file for testing
+        -selectionFunction: RAN, LEN, PROB, TREE
+        -K: K value for tree entropy. 10 by default.
+        -iteration: number of iteration.  20 by default.
+        -wordsPerIter: words per iteration. 1500 by default
+
+4. Execute.
+
+    java -mx4500m -cp bin/:lib/stanford-parser.jar:lib/commons-cli-1.2.jar edu.utexas.nlp.ActiveLearner -selectionFunction TREE -initBank wsj/init.mrg -trainBank wsj/0103.mrg -testBank wsj/20.mrg -candidateBank wsj/temp.mrg -K 10
+
+    You can also reproduce the entire results of the report(figure 1 to 5) by executing the following scripts sequentially.
+
+    batch.sh 
+    init01.sh  
+    train46.sh
+    batch2500.sh 
+    topk.sh  
