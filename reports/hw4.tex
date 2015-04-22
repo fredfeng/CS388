@@ -32,21 +32,40 @@ when (number, content) := MessageReceived()
 \end{verbatim}
 To achieve the above goal, SmartSynth's approach incorporates two key ingredients: First, it designs
 a domain specific language(DSL) to bridge the gap between natural language and the
-target script; Second, for the data- flow that can not be inferred by 
-standard NLP techniques, SmartSynth uses techniques from the Program Synthesis community to infer the missing relations.
+target script; Second, it infers a set of components and their partial dataflow relations 
+from natural language using NLP techniques; Third, for the missing dataflow relations that can not 
+be detected by previous step, SmartSynth infers them via type-based synthesis~\citep{typebase}, 
+a standard technique from the program synthesis community.
 
-The paper reduces the task of generating smartphone script to weaving a set of 
-related APIs. To achieve this goal, his system first identify a set of components 
-through standard NLP techniques like parse tree and bag-of-words as features; 
-To infer the relations among components, it adopts the rule-based technique to 
-generate the relations and uses program synthesis to infer the missing ones. For
-the relation that has multiple candidates, it designs a ranking scheme to pick up
-the one with a highest probability.
+Here is the entire workflow of the system: given a task from the user, 
+SmartSynth first maps the natural language into script components such as
+APIs(SendMessage) and literals(``I'm driving"); Then it uses some light-weight NLP techniques
+to uncover the dataflow relations between components(``I'm driving" is an argument of SendMessage),
+such as Named-entity recognition and POS tagging; If previous dataflow relations do not fully specify
+the dataflow relationships, SmartSynth invokes a type-based synthesis algorithm to complete the 
+missing relations; Finally, if there are multiple equally high-ranked relations, the system will
+trigger an interactive conversation with the user to resolve ambiguity.
 
-The paper evaluates the technique through 50 online task descriptions and the result
-sounds promising: the precision is over 90\%.
+The most interesting features of SmartSynth is inferring the dataflow relations between
+components: although its NLP algorithm can map the feature set into target components,
+it might not precisely capture all the cases due to the ambiguity of natural language.
+In this case, SmartSynth incorporates techniques from program synthesis to increase
+the confidence about the quality of target script.
 
+SmartSynth's corpus is very small: it compiles 50 online task descriptions found in
+help forums of Tasker, App Inventor and TouchDevelop. The overall result
+looks quite promising: it successfully detects more than 90.0\% tasks. It also compares 
+the result of only using NLP techniques with the result of combining NLP and program 
+synthesis: without program synthesis, SmartSynth only correctly translates 58.7\% tasks. 
+This result is unfair to the NLP side since the system only adopts a few light-weight 
+features from it and it's not a learning-based system.
 
+SmartSynth is not the first system on translating natural language into executable
+program: SILT~\cite{silt} and WASP~\citep{wasp} translate natural language into GEO-query 
+and RoboCup language; Regexp~\cite{reg} coverts natural language into regular expression.
+To our best of knowledge, we have not heard of any previous work about translating
+ pseudocode(Describing a algorithm) into its implementation(C, Java or Python), 
+which becomes the original motivation of our project.
 \section{Improvement}\label{sec:alg}
 The main idea of our project is to translate an algorithm(in pseudo-code) into an 
 executable program(Python). There are several improvements we can make based on the 
@@ -55,7 +74,7 @@ limitations of SmartSynth:
 First, even though the paper claims that one of its contributions is to combine the
 techniques of both NLP and program synthesis, it lacks the robustness that characterize
 recent advances in statical NLP. For instance, instead of using a supervised learning 
-approach to infer the data- flow of among multiple components, SmartSynth heavily 
+approach to infer the dataflow relations between components, SmartSynth heavily 
 relies on a set of so-called ``expert-rules" to parse the natural language. On the 
 other hand, although our project will also adopt techniques from program synthesis when 
 pure NLP's techniques fail to cover a complete semantics of the pseudo-code, we 
