@@ -63,11 +63,11 @@ features from it and it's not a learning-based system.
 SmartSynth is not the first system on translating natural language into executable
 program: SILT~\cite{silt} and WASP~\citep{wasp} translate natural language into GEO-query 
 and RoboCup language; Regexp~\cite{reg} coverts natural language into regular expression.
-To our best of knowledge, we have not heard of any previous work about translating
- pseudocode(Describing a algorithm) into its implementation(C, Java or Python), 
-which becomes the original motivation of our project.
+To the best of our knowledge, we have not heard of any previous work about translating
+ pseudocode(Described in an algorithm) into its implementation(C, Java or Python). 
+This observation becomes the original motivation of our project.
 \section{Improvement}\label{sec:alg}
-The main idea of our project is to translate an algorithm(in pseudo-code) into an 
+The main idea of our project is to translate an algorithm(in pseudocode) into an 
 executable program(Python). There are several improvements we can make based on the 
 limitations of SmartSynth:
 
@@ -77,7 +77,7 @@ recent advances in statical NLP. For instance, instead of using a supervised lea
 approach to infer the dataflow relations between components, SmartSynth heavily 
 relies on a set of so-called ``expert-rules" to parse the natural language. On the 
 other hand, although our project will also adopt techniques from program synthesis when 
-pure NLP's techniques fail to cover a complete semantics of the pseudo-code, we 
+pure NLP techniques fail to cover a complete semantics of the pseudocode, we 
 leverage a standard statistical model to improve the 
 robustness of our system in the presence of large corpus: 
 \[
@@ -86,21 +86,21 @@ f = arg \ max_{d\in D(G|s)} Pr_{\lambda}(d|s)
 where $s$ is the input sentence, $d$ is one possible derivation and $G$ is the 
 SCFG adopted from WASP~\cite{wasp}.
 We are also using a maximum-entropy model that defines the conditional probability 
-over multiple derivations: given a pseudo-code in natural language, the problem is reduced to searching the most probable derivation that yields the target program.
+over multiple derivations: given a pseudocode in natural language, the problem is reduced to searching the most probable derivation that yields the target program.
 
 
 Second, SmartSynth is tightly integrating with a set of domain-specific APIs and their
 corresponding English language. The consequence is to support any new API, it has to 
-add new rules for the API and adjusts the metrics accordingly. On the other hand, the 
-context free grammar of our target language will be a standard intermediate 
-representation which covers most of the common semantics of the program, thus it's 
-flexible to be translated into multiple target languages(C, Java or Python).
+add new rules for the API and adjust the metrics accordingly. On the other hand, the 
+context free grammar of our target language is a standard intermediate 
+representation(IR) which covers most of the common semantics of the program, thus it's 
+flexible to translate the IR into multiple target languages(C, Java or Python).
 
 Third, SmartSynth only supports small task described within one 
 sentence and it will be very interesting to consider the task that contains multiple 
-sentences. For instance, each sample of our train set is an algorithm which is
+sentences. For instance, each sample in our train set is an algorithm which is
 described by multiple sentences and we need to resolve the context 
-dependency~\cite{dep} of them when perform the semantic parsing.
+dependency~\cite{dep} between sentences when perform the semantic parsing.
 
 Fourth, to improve the robustness of the system, even though both SmartSynth 
 and our project adopt techniques from the program synthesis community, 
@@ -112,8 +112,8 @@ statement based on input-output examples~\cite{input} from the user.
 SmartSynth is evaluated through 50 small online tasks. Even though 
 the precision sounds promising(90\%), it is still unclear how well the 
 technique will be in the presence of large corpus. Especially the recall
-rate is absence from their paper. As to our project of translating pseudo-code to 
-program, we choose 100 algorithms from both textbooks~\cite{taocp} and educational websites~\cite{codebat}. Each
+rate is absence from their paper. As to our project of translating pseudocode to 
+program, we choose 100 algorithms from both textbooks~\cite{taocp} and educational websites~\cite{codebat} and an algorithm contains about ten sentences in average. Each
 pair of our training set is in the form of $(s,d)$ where $s$ is 
 a sentence in the algorithm and $d$ is the meaning representation in the form 
 of our formal language. Then a semantic parser is learned from the training
@@ -131,13 +131,13 @@ correctly.
 
 \subsection{Conclusion}
 To conclude, both SmartSynth and our current project are targeting the problem 
-of translating natural language into executable code(In our context, the pseudo-code
+of translating natural language into executable code(In our context, the pseudocode
 is described by natural language and the Python program will be the target
 executable code.) by combining the techniques
 from both NLP and PL communities. Here is the biggest different between our 
 project and SmartSynth: instead of focusing on a small specific domain
 and handcrafting everything through some mysterious ``expert rules", our system
-is designed and evaluated on top of a standard statistical model yet leveraging
+is not only designed and evaluated on top of a standard statistical model, but also leverages
 the techniques(Such as inferring missing statements from input-output examples) 
 from the program synthesis community to improve the robustness.
 
